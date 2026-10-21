@@ -1,0 +1,2 @@
+# Invitations test suite
+
