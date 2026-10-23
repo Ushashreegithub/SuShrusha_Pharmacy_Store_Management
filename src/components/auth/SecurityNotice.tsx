@@ -14,12 +14,12 @@ export const SecurityNotice: React.FC<SecurityNoticeProps> = ({
     "owner-only": {
       icon: <Building2 className="w-4 h-4 text-[#0F766E] flex-shrink-0" />,
       title: "Business Owner Registration Only",
-      text: "Only pharmacy business owners register publicly here. Store managers, pharmacists, and staff join exclusively through an invitation link issued by the owner.",
+      text: "Only pharmacy business owners register publicly here. Store managers, pharmacists, and staff accounts are created directly by the owner from the dashboard.",
     },
     "employee-link": {
       icon: <Clock className="w-4 h-4 text-[#0F766E] flex-shrink-0" />,
-      title: "Secure 24-Hour Employee Setup",
-      text: "This invitation link is valid for 24 hours and can only be used once. Set your password to activate your account with your assigned store permissions.",
+      title: "Direct Account Notice",
+      text: "Staff accounts are directly created by store owners. Log in directly using your provided credentials.",
     },
     "session-invalidation": {
       icon: <KeyRound className="w-4 h-4 text-[#0F766E] flex-shrink-0" />,

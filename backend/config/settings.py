@@ -134,12 +134,45 @@ REST_FRAMEWORK = {
 }
 
 # CORS and CSRF Configuration
-cors_origins_raw = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
-CORS_ALLOWED_ORIGINS = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
+default_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:3002",
+    "http://127.0.0.1:3002",
+]
+
+cors_origins_raw = os.getenv("CORS_ALLOWED_ORIGINS", "")
+if cors_origins_raw:
+    configured_cors = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys(default_origins + configured_cors))
+else:
+    CORS_ALLOWED_ORIGINS = default_origins
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+]
 CORS_ALLOW_CREDENTIALS = True
 
-csrf_trusted_raw = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000")
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_trusted_raw.split(",") if o.strip()]
+csrf_trusted_raw = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+if csrf_trusted_raw:
+    configured_csrf = [o.strip() for o in csrf_trusted_raw.split(",") if o.strip()]
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(default_origins + configured_csrf))
+else:
+    CSRF_TRUSTED_ORIGINS = default_origins
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 
 # Cookie Security & SameSite settings
 SESSION_COOKIE_HTTPONLY = True

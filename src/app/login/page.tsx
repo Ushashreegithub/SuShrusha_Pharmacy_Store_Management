@@ -108,7 +108,7 @@ function LoginContent() {
   return (
     <AuthSplitLayout
       title="Sign In to Your Account"
-      subtitle="Access your Sushrusha Pharmacy store dashboard and multi-branch operations."
+      subtitle="Access your DiracPharma store dashboard and multi-branch operations."
     >
       <div className="space-y-4">
         {/* Development-Only Sample Presets (Gated for development only) */}
@@ -199,7 +199,7 @@ function LoginContent() {
             label="Business Email"
             type="email"
             name="email"
-            placeholder="e.g. owner@sushrusha.com"
+            placeholder="e.g. owner@diracpharma.com"
             required
             value={email}
             onChange={(e) => {
@@ -263,7 +263,7 @@ function LoginContent() {
           </p>
 
           <p className="text-[11px] text-slate-400">
-            Pharmacy staff: Join through the invitation link issued by your store administrator.
+            Pharmacy staff &amp; managers: Sign in directly using credentials provided by your store owner.
           </p>
         </div>
       </div>

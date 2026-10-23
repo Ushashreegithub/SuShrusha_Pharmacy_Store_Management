@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sushrusha Pharmacy — Multi-Store Pharmacy Management",
+  title: "DiracPharma — Intelligent Pharmacy Management by DiracAI Services",
   description:
-    "Secure pharmacy store management system. Clean, modern multi-branch operations and role-based access.",
+    "Intelligent Management. Better Pharmacy Operations. DiracPharma is an enterprise pharmacy store management system by DiracAI Services.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

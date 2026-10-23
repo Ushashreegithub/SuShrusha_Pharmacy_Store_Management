@@ -7,12 +7,14 @@ from apps.organizations.views import (
     StoreMemberDetailView,
     OrganizationOverviewView,
     OrganizationTeamView,
+    TeamMemberDetailView,
     OrganizationSettingsView,
 )
 
 urlpatterns = [
     path("overview/", OrganizationOverviewView.as_view(), name="org-overview"),
     path("team/", OrganizationTeamView.as_view(), name="org-team"),
+    path("team/<uuid:user_id>/", TeamMemberDetailView.as_view(), name="org-team-member-detail"),
     path("settings/", OrganizationSettingsView.as_view(), name="org-settings"),
     path("stores/", StoreListView.as_view(), name="store-list-create"),
     path("stores/<uuid:store_id>/", StoreDetailView.as_view(), name="store-detail-update"),

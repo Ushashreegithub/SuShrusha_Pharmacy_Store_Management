@@ -25,11 +25,11 @@ function RolesPermissionsContent() {
       badge: "Executive",
       badgeColor: "bg-teal-50 text-[#0F766E] border-teal-200",
       description:
-        "Full executive control across all stores within the organization. Authorized to create branches, invite managers, configure settings, and inspect audit logs.",
+        "Full executive control across all stores within the organization. Authorized to create branches, create and manage managers, configure settings, and inspect audit logs.",
       permissions: [
         "Create, edit, and configure store branches",
         "Assign and change store managers",
-        "Invite store managers, pharmacists, and staff across all branches",
+        "Create and manage store managers, pharmacists, and staff across all branches",
         "Manage organization settings and billing",
         "Inspect organization-wide security audit logs",
         "Restricted strictly to own organization (zero cross-tenant data access)",
@@ -44,10 +44,10 @@ function RolesPermissionsContent() {
       badge: "Management",
       badgeColor: "bg-sky-50 text-sky-700 border-sky-200",
       description:
-        "Branch-level operational management. Authorized to manage assigned store team members, issue staff invitations, and review branch-level records.",
+        "Branch-level operational management. Authorized to manage assigned store team members, assign branch staff, and review branch-level records.",
       permissions: [
         "Manage staff memberships within assigned store branches",
-        "Issue invitation links for pharmacists, cashiers, and staff for assigned branches",
+        "Assign team members to assigned branch locations",
         "Deactivate branch memberships (affects only that specific branch)",
         "Oversee daily branch dispensing, counter shifts, and local stock",
       ],
@@ -73,7 +73,7 @@ function RolesPermissionsContent() {
       restrictions: [
         "Cannot access branches where membership is inactive or unassigned",
         "Cannot view administrative audit logs or organization settings",
-        "Cannot issue team invitations or modify member permissions",
+        "Cannot create accounts or modify member permissions",
       ],
     },
     {

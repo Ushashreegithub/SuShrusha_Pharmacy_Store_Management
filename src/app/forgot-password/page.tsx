@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
             label="Registered Business Email"
             type="email"
             name="email"
-            placeholder="e.g. owner@sushrusha.com"
+            placeholder="e.g. owner@diracpharma.com"
             required
             value={email}
             onChange={(e) => {
@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
               <span>Anti-Enumeration Protection</span>
             </div>
             <p className="text-[11px] text-slate-500">
-              For security, Sushrusha Pharmacy never reveals whether an account exists for a submitted email.
+              For security, DiracPharma never reveals whether an account exists for a submitted email.
             </p>
           </div>
 

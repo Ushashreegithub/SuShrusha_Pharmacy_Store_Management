@@ -59,6 +59,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const setActiveStoreId = (id: string) => {
     setActiveStoreIdState(id);
     if (typeof window !== "undefined") {
+      localStorage.setItem("diracpharma_active_store", id);
       localStorage.setItem("sushrusha_active_store", id);
     }
   };
@@ -70,6 +71,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       // Ignore network errors on logout
     } finally {
       if (typeof window !== "undefined") {
+        localStorage.removeItem("diracpharma_active_store");
         localStorage.removeItem("sushrusha_active_store");
       }
       router.push("/login");
@@ -97,7 +99,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         setStores(storeList);
 
         // Saved active store
-        const savedStoreId = typeof window !== "undefined" ? localStorage.getItem("sushrusha_active_store") : null;
+        const savedStoreId =
+          typeof window !== "undefined"
+            ? localStorage.getItem("diracpharma_active_store") ||
+              localStorage.getItem("sushrusha_active_store")
+            : null;
         if (savedStoreId && storeList.some((s) => s.id === savedStoreId)) {
           setActiveStoreIdState(savedStoreId);
         } else {

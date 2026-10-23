@@ -5,18 +5,30 @@ import {
   UserProfile,
   AuthResponse,
   StoreInfo,
+  ChangePasswordPayload,
 } from "@/types/auth";
 import {
   Store,
   CreateStorePayload,
   UpdateStorePayload,
   OrganizationOverview,
-  Invitation,
-  CreateInvitationPayload,
   StoreMember,
   TeamMember,
+  CreateEmployeePayload,
+  UpdateEmployeePayload,
   AuditEventItem,
 } from "@/types/dashboard";
+
+export function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname || "localhost";
+    return `${window.location.protocol}//${host}:8000/api`;
+  }
+  return "http://localhost:8000/api";
+}
 
 export const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
@@ -57,8 +69,9 @@ export async function ensureCsrfToken(): Promise<string | null> {
   let token = getCsrfTokenFromCookie();
   if (token) return token;
 
+  const base = getApiBaseUrl();
   try {
-    const res = await fetch(`${API_BASE}/auth/csrf/`, {
+    const res = await fetch(`${base}/auth/csrf/`, {
       method: "GET",
       credentials: "include",
     });
@@ -76,7 +89,8 @@ export async function ensureCsrfToken(): Promise<string | null> {
  * Standard HTTP fetch wrapper with CSRF injection and credential management
  */
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+  const base = getApiBaseUrl();
+  const url = `${base}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -108,8 +122,9 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
       credentials: "include",
     });
   } catch (networkError) {
+    console.error("API Network Error:", networkError, "Requested URL:", url);
     throw new ApiError(
-      "Unable to connect to the Sushrusha backend service. Please check that the server is running.",
+      "Unable to connect to the DiracPharma backend service. Please check that the server is running.",
       0
     );
   }
@@ -315,12 +330,44 @@ export async function updateStoreMemberStatusApi(
   );
 }
 
+export async function changePasswordApi(
+  payload: ChangePasswordPayload
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/auth/change-password/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getOrganizationOverviewApi(): Promise<OrganizationOverview> {
   return apiFetch<OrganizationOverview>("/organizations/overview/");
 }
 
 export async function getOrganizationTeamApi(): Promise<TeamMember[]> {
   return apiFetch<TeamMember[]>("/organizations/team/");
+}
+
+export async function createEmployeeApi(
+  payload: CreateEmployeePayload
+): Promise<{ message: string; user: TeamMember }> {
+  return apiFetch<{ message: string; user: TeamMember }>("/organizations/team/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getTeamMemberDetailApi(userId: string): Promise<TeamMember> {
+  return apiFetch<TeamMember>(`/organizations/team/${userId}/`);
+}
+
+export async function updateTeamMemberApi(
+  userId: string,
+  payload: UpdateEmployeePayload
+): Promise<TeamMember> {
+  return apiFetch<TeamMember>(`/organizations/team/${userId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getOrganizationSettingsApi(): Promise<{
@@ -337,70 +384,6 @@ export async function updateOrganizationSettingsApi(payload: {
 }): Promise<{ id: string; name: string; slug: string }> {
   return apiFetch("/organizations/settings/", {
     method: "PATCH",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function getInvitationsApi(params?: {
-  status?: string;
-  store_id?: string;
-}): Promise<Invitation[]> {
-  const query = new URLSearchParams();
-  if (params?.status) query.append("status", params.status);
-  if (params?.store_id) query.append("store_id", params.store_id);
-  const qStr = query.toString();
-  return apiFetch<Invitation[]>(`/invitations/${qStr ? `?${qStr}` : ""}`);
-}
-
-export async function createInvitationApi(
-  payload: CreateInvitationPayload
-): Promise<Invitation> {
-  return apiFetch<Invitation>("/invitations/", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function resendInvitationApi(
-  invitationId: string
-): Promise<Invitation> {
-  return apiFetch<Invitation>(`/invitations/${invitationId}/resend/`, {
-    method: "POST",
-  });
-}
-
-export async function revokeInvitationApi(
-  invitationId: string
-): Promise<{ detail: string; status: string }> {
-  return apiFetch<{ detail: string; status: string }>(
-    `/invitations/${invitationId}/revoke/`,
-    {
-      method: "POST",
-    }
-  );
-}
-
-export async function verifyInvitationTokenApi(token: string): Promise<{
-  status: "valid" | "expired" | "used" | "revoked" | "invalid";
-  email: string;
-  role: string;
-  role_display: string;
-  store_name: string;
-  store_code: string;
-  organization_name: string;
-  expires_at: string;
-}> {
-  return apiFetch(`/invitations/verify/?token=${encodeURIComponent(token)}`);
-}
-
-export async function acceptInvitationApi(payload: {
-  token: string;
-  fullName: string;
-  password: string;
-  confirmPassword: string;
-}): Promise<{ message: string; email: string; role: string; store_name: string }> {
-  return apiFetch("/invitations/accept/", {
-    method: "POST",
     body: JSON.stringify(payload),
   });
 }

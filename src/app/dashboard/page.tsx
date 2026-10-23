@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Store,
   Users,
+  UserPlus,
   Mail,
   Activity,
   Plus,
@@ -175,21 +176,21 @@ function DashboardOverviewContent() {
             <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] space-y-2 shadow-2xs">
               <div className="flex items-center justify-between text-slate-500">
                 <span className="text-xs font-semibold uppercase tracking-wider">
-                  Pending Invites
+                  Total Staff
                 </span>
-                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Mail className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0F766E] flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4" />
                 </div>
               </div>
               <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                {overview ? overview.metrics.pending_invitations : 0}
+                {overview ? overview.metrics.total_members : 1}
               </div>
               <div className="text-[11px] text-slate-500 flex items-center gap-1">
                 <Link
                   href="/dashboard/team"
                   className="font-medium text-[#0F766E] hover:underline"
                 >
-                  Manage invitations &rarr;
+                  Manage team &rarr;
                 </Link>
               </div>
             </div>
@@ -203,11 +204,11 @@ function DashboardOverviewContent() {
               </div>
               <div className="max-w-md mx-auto space-y-1">
                 <h3 className="text-base font-bold text-slate-900">
-                  Welcome to Sushrusha Pharmacy!
+                  Welcome to DiracPharma!
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Your business organization is ready. Create your first pharmacy branch to
-                  start managing store operations, inventory, and inviting staff.
+                  start managing store operations, inventory, and adding staff.
                 </p>
               </div>
               <div className="pt-2 flex flex-wrap justify-center gap-3">
@@ -219,8 +220,8 @@ function DashboardOverviewContent() {
                 </Link>
                 <Link href="/dashboard/team">
                   <Button variant="outline" size="md">
-                    <Mail className="w-4 h-4 mr-1.5" />
-                    Invite Team Member
+                    <UserPlus className="w-4 h-4 mr-1.5" />
+                    Add Employee
                   </Button>
                 </Link>
               </div>
@@ -365,7 +366,7 @@ function DashboardOverviewContent() {
             </span>
             <p className="text-teal-900">
               You are assigned to manage {stores.length} store branch(es). You can
-              manage branch staff, issue staff invitations, and view operational records.
+              manage branch staff, assign team members, and view operational records.
             </p>
           </div>
 

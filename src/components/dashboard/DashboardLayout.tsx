@@ -54,7 +54,7 @@ export function DashboardLayout({
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
         <div className="w-9 h-9 border-3 border-[#0F766E] border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-sm font-medium text-slate-600">
-          Loading Sushrusha Pharmacy Workspace...
+          Loading DiracPharma Workspace...
         </p>
       </div>
     );
@@ -84,7 +84,7 @@ export function DashboardLayout({
       visible: isOwner || isManager,
     },
     {
-      label: "Team & Invitations",
+      label: "Team Management",
       href: "/dashboard/team",
       icon: Users,
       active: pathname === "/dashboard/team",
@@ -361,7 +361,7 @@ export function DashboardLayout({
           <div className="pt-4 border-t border-[#E2E8F0] space-y-2">
             <div className="p-3 bg-teal-50/60 rounded-xl border border-teal-100 text-xs">
               <span className="font-semibold text-slate-800 block text-[11px]">
-                {user.organizations?.[0]?.name || "Sushrusha Pharmacy"}
+                {user.organizations?.[0]?.name || "DiracPharma"}
               </span>
               <span className="text-[10px] text-teal-700 font-mono">
                 {stores.length} Registered {stores.length === 1 ? "Branch" : "Branches"}

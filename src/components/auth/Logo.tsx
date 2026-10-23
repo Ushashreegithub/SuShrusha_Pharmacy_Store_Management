@@ -4,6 +4,7 @@ import Link from "next/link";
 interface LogoProps {
   size?: "sm" | "md" | "lg";
   withTagline?: boolean;
+  tagline?: string;
   href?: string;
   className?: string;
 }
@@ -11,13 +12,15 @@ interface LogoProps {
 export const Logo: React.FC<LogoProps> = ({
   size = "md",
   withTagline = false,
+  tagline,
   href = "/",
   className = "",
 }) => {
-  const iconSizes = {
-    sm: "w-7 h-7",
-    md: "w-9 h-9",
-    lg: "w-11 h-11",
+  // Proportional icon sizing matched to brand text font size
+  const iconConfig = {
+    sm: { sizePx: 22, tw: "w-[22px] h-[22px]" },
+    md: { sizePx: 26, tw: "w-[26px] h-[26px]" },
+    lg: { sizePx: 32, tw: "w-[32px] h-[32px]" },
   };
 
   const textSizes = {
@@ -26,39 +29,40 @@ export const Logo: React.FC<LogoProps> = ({
     lg: "text-2xl tracking-tight",
   };
 
+  const currentIcon = iconConfig[size];
+
   const content = (
-    <div className={`flex items-center gap-2.5 select-none ${className}`}>
-      {/* Minimal, modern healthcare cross icon in deep teal and primary teal */}
+    <div className={`inline-flex items-center gap-2 select-none ${className}`}>
+      {/* Official DiracAI Services company logo matching brand text height */}
       <div
-        className={`${iconSizes[size]} rounded-lg bg-[#0F766E] flex items-center justify-center flex-shrink-0 shadow-xs relative`}
-        aria-hidden="true"
+        className={`${currentIcon.tw} flex-shrink-0 flex items-center justify-center`}
+        style={{
+          width: `${currentIcon.sizePx}px`,
+          height: `${currentIcon.sizePx}px`,
+        }}
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5 text-white"
-        >
-          {/* Medical cross with rounded clean edges */}
-          <path
-            d="M12 5V19M5 12H19"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <img
+          src="/images/diracai-logo-compact.png"
+          alt="DiracAI Services Logo"
+          width={currentIcon.sizePx}
+          height={currentIcon.sizePx}
+          className="w-full h-full object-contain block"
+          style={{
+            maxWidth: `${currentIcon.sizePx}px`,
+            maxHeight: `${currentIcon.sizePx}px`,
+          }}
+        />
       </div>
 
       <div className="flex flex-col text-left">
         <span
           className={`font-bold text-[#164E63] leading-none ${textSizes[size]}`}
         >
-          Sushrusha <span className="text-[#0F766E] font-semibold">Pharmacy</span>
+          Dirac<span className="text-[#0F766E] font-semibold">Pharma</span>
         </span>
         {withTagline && (
-          <span className="text-[11px] text-slate-500 font-normal mt-0.5">
-            Store Management System
+          <span className="text-[11px] text-slate-500 font-medium mt-0.5">
+            {tagline || "by DiracAI Services"}
           </span>
         )}
       </div>

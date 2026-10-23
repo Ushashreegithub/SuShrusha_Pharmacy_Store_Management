@@ -1,7 +1,9 @@
 from datetime import timedelta
 from django.db import transaction, IntegrityError
 from django.utils import timezone
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.sessions.models import Session
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -29,6 +31,7 @@ from apps.authentication.serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
     UserProfileSerializer,
+    ChangePasswordSerializer,
 )
 
 
@@ -473,4 +476,61 @@ class CurrentUserView(APIView):
     def get(self, request):
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ChangePasswordView(APIView):
+    """
+    Allows authenticated users (Owners, Managers, Employees) to voluntarily change their password.
+    Validates current password and enforces Django password validation on the new password.
+    Updates the session authentication hash so the current session remains authenticated.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        current_password = serializer.validated_data["current_password"]
+        new_password = serializer.validated_data["new_password"]
+
+        if not user.check_password(current_password):
+            return Response(
+                {"current_password": ["Current password is incorrect."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if current_password == new_password:
+            return Response(
+                {"new_password": ["New password cannot be the same as your current password."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as e:
+            return Response(
+                {"new_password": list(e.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            user.set_password(new_password)
+            user.save(update_fields=["password", "updated_at"])
+
+            # Rotate session auth hash so current session remains valid
+            update_session_auth_hash(request, user)
+
+            AuditEvent.log_event(
+                event_type="AUTH_PASSWORD_CHANGED",
+                request=request,
+                user=user,
+                details={"action": "User voluntarily changed account password"},
+            )
+
+        return Response(
+            {"message": "Password updated successfully."},
+            status=status.HTTP_200_OK,
+        )
 

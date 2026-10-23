@@ -166,7 +166,7 @@ function CreateStoreContent() {
               <Input
                 label="Store / Branch Name"
                 name="name"
-                placeholder="e.g. Sushrusha Pharmacy - City Center"
+                placeholder="e.g. DiracPharma - City Center"
                 required
                 value={formData.name}
                 onChange={handleChange}
@@ -243,7 +243,7 @@ function CreateStoreContent() {
               label="Store Email (Optional)"
               name="email"
               type="email"
-              placeholder="e.g. branch.center@sushrusha.com"
+              placeholder="e.g. branch.center@diracpharma.com"
               value={formData.email}
               onChange={handleChange}
               error={errors.email}

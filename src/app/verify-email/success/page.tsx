@@ -12,23 +12,27 @@ function EmailVerifiedSuccessContent() {
   const searchParams = useSearchParams();
   const queryEmail = searchParams.get("email");
 
-  const [verifiedEmail, setVerifiedEmail] = useState(queryEmail || "owner@sushrusha.com");
-  const [organization, setOrganization] = useState("Sushrusha Pharmacy Group");
+  const [verifiedEmail, setVerifiedEmail] = useState(queryEmail || "owner@diracpharma.com");
+  const [organization, setOrganization] = useState("Dirac Healthcare Pharmacy");
 
   useEffect(() => {
     let email = queryEmail;
     if (!email && typeof window !== "undefined") {
       email =
+        sessionStorage.getItem("diracpharma_verified_email") ||
         sessionStorage.getItem("sushrusha_verified_email") ||
+        sessionStorage.getItem("diracpharma_pending_email") ||
         sessionStorage.getItem("sushrusha_pending_email") ||
-        "owner@sushrusha.com";
+        "owner@diracpharma.com";
     }
     if (email) {
       setVerifiedEmail(email);
     }
 
     if (typeof window !== "undefined") {
-      const storedOrg = sessionStorage.getItem("sushrusha_pending_org");
+      const storedOrg =
+        sessionStorage.getItem("diracpharma_pending_org") ||
+        sessionStorage.getItem("sushrusha_pending_org");
       if (storedOrg) {
         setOrganization(storedOrg);
       }
@@ -43,7 +47,7 @@ function EmailVerifiedSuccessContent() {
         </div>
       }
       title="Email Verified Successfully"
-      subtitle="Your corporate email address has been verified. Your pharmacy owner account is now active in Sushrusha Pharmacy."
+      subtitle="Your corporate email address has been verified. Your pharmacy owner account is now active in DiracPharma."
       footer={
         <div className="text-xs text-slate-500">
           Need to register a different business?{" "}

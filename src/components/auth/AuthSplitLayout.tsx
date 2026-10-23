@@ -59,8 +59,8 @@ export const AuthSplitLayout: React.FC<AuthSplitLayoutProps> = ({
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <span className="font-semibold text-slate-900 block">Single-Use Staff Invitations:</span>
-                    <span className="text-slate-500">Employees join via 24-hour secure setup links.</span>
+                    <span className="font-semibold text-slate-900 block">Direct Account Provisioning:</span>
+                    <span className="text-slate-500">Staff sign in immediately with credentials created by store owners.</span>
                   </div>
                 </div>
 
@@ -104,7 +104,7 @@ export const AuthSplitLayout: React.FC<AuthSplitLayoutProps> = ({
 
       {/* Footer copyright */}
       <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-400 mt-6 select-none">
-        <p>© {new Date().getFullYear()} Sushrusha Pharmacy Store Management. Frontend Design Phase.</p>
+        <p>© {new Date().getFullYear()} DiracPharma by DiracAI Services. All rights reserved.</p>
       </footer>
     </div>
   );

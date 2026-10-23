@@ -10,6 +10,12 @@ export interface OwnerRegistrationPayload {
   agreeToTerms?: boolean;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  confirm_new_password: string;
+}
+
 export interface EmployeeSetupPayload {
   password: string;
   confirmPassword: string;

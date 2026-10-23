@@ -29,7 +29,7 @@ function VerifyEmailContent() {
   const registeredParam = searchParams.get("registered") === "true";
 
   const [email, setEmail] = useState<string>(() => {
-    return emailParam || "owner@sushrusha.com";
+    return emailParam || "owner@diracpharma.com";
   });
   const [isRegistered, setIsRegistered] = useState(registeredParam);
   const [isResending, setIsResending] = useState(false);
@@ -47,7 +47,9 @@ function VerifyEmailContent() {
     if (emailParam) {
       setEmail(emailParam);
     } else if (typeof window !== "undefined") {
-      const stored = sessionStorage.getItem("sushrusha_pending_email");
+      const stored =
+        sessionStorage.getItem("diracpharma_pending_email") ||
+        sessionStorage.getItem("sushrusha_pending_email");
       if (stored) {
         setEmail(stored);
         setIsRegistered(true);
@@ -64,6 +66,7 @@ function VerifyEmailContent() {
       verifyEmailApi(tokenParam)
         .then((res) => {
           if (typeof window !== "undefined") {
+            sessionStorage.setItem("diracpharma_verified_email", res.email);
             sessionStorage.setItem("sushrusha_verified_email", res.email);
           }
           router.push(`/verify-email/success?email=${encodeURIComponent(res.email)}`);
@@ -126,6 +129,7 @@ function VerifyEmailContent() {
     try {
       const res = await verifyEmailApi(manualToken.trim());
       if (typeof window !== "undefined") {
+        sessionStorage.setItem("diracpharma_verified_email", res.email);
         sessionStorage.setItem("sushrusha_verified_email", res.email);
       }
       router.push(`/verify-email/success?email=${encodeURIComponent(res.email)}`);

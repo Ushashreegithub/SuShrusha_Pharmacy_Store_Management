@@ -64,7 +64,7 @@ function AuditContent() {
   return (
     <DashboardLayout
       title="Audit Activity Trail"
-      subtitle="Immutable security log of administrative actions, store updates, and invitation events."
+      subtitle="Immutable security log of administrative actions, store updates, and employee account events."
       action={
         <Button
           variant="outline"
@@ -90,15 +90,13 @@ function AuditContent() {
               className="px-3 py-1.5 rounded-xl border border-[#E2E8F0] text-xs font-medium text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-[#0F766E]"
             >
               <option value="all">All Events</option>
+              <option value="EMPLOYEE_ACCOUNT_CREATED">Employee Account Created</option>
+              <option value="EMPLOYEE_ACCOUNT_UPDATED">Employee Account Updated</option>
               <option value="STORE_CREATED">Store Created</option>
               <option value="STORE_UPDATED">Store Updated</option>
               <option value="STORE_MANAGER_ASSIGNED">Store Manager Assigned</option>
               <option value="STORE_MEMBERSHIP_ASSIGNED">Store Membership Assigned</option>
               <option value="STORE_MEMBERSHIP_UPDATED">Store Membership Status Changed</option>
-              <option value="INVITATION_CREATED">Invitation Created</option>
-              <option value="INVITATION_ACCEPTED">Invitation Accepted</option>
-              <option value="INVITATION_RESENT">Invitation Resent</option>
-              <option value="INVITATION_REVOKED">Invitation Revoked</option>
               <option value="OWNER_REGISTERED">Owner Registered</option>
               <option value="USER_LOGGED_IN">User Logged In</option>
             </select>

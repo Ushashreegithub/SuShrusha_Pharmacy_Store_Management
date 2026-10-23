@@ -23,7 +23,7 @@ export default function PasswordResetSuccessPage() {
         <div className="text-xs text-slate-500">
           Need support?{" "}
           <span className="text-[#0F766E] font-medium">
-            support@sushrusha.com
+            support@diracpharma.com
           </span>
         </div>
       }

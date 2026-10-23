@@ -18,6 +18,9 @@ function LogoutContent() {
   useEffect(() => {
     logoutApi().catch(() => {});
     if (typeof window !== "undefined") {
+      sessionStorage.removeItem("diracpharma_pending_email");
+      sessionStorage.removeItem("diracpharma_pending_org");
+      sessionStorage.removeItem("diracpharma_verified_email");
       sessionStorage.removeItem("sushrusha_pending_email");
       sessionStorage.removeItem("sushrusha_pending_org");
       sessionStorage.removeItem("sushrusha_verified_email");
@@ -45,7 +48,7 @@ function LogoutContent() {
       subtitle={
         isExpired
           ? "Your session has expired due to inactivity. Please sign in again to continue."
-          : "Your Sushrusha Pharmacy session has been ended and security credentials cleared."
+          : "Your DiracPharma session has been ended and security credentials cleared."
       }
       footer={
         <div className="text-xs text-slate-500">

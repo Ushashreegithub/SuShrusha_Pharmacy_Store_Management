@@ -13,9 +13,6 @@ import {
   Edit,
   UserCheck,
   UserPlus,
-  Send,
-  RotateCcw,
-  Ban,
   ArrowLeft,
   CheckCircle2,
   AlertTriangle,
@@ -33,15 +30,11 @@ import { Input } from "@/components/ui/Input";
 import {
   getStoreDetailApi,
   getStoreMembersApi,
-  getInvitationsApi,
   assignStoreManagerApi,
   updateStoreMemberStatusApi,
   addStoreMemberApi,
-  createInvitationApi,
-  resendInvitationApi,
-  revokeInvitationApi,
 } from "@/lib/api";
-import { Store as StoreType, StoreMember, Invitation } from "@/types/dashboard";
+import { Store as StoreType, StoreMember } from "@/types/dashboard";
 
 function StoreDetailContent() {
   const params = useParams();
@@ -54,7 +47,6 @@ function StoreDetailContent() {
   const { user, refreshStores } = useDashboard();
   const [store, setStore] = useState<StoreType | null>(null);
   const [members, setMembers] = useState<StoreMember[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(
@@ -71,12 +63,6 @@ function StoreDetailContent() {
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState<string | null>(null);
 
-  const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"pharmacist" | "cashier" | "staff" | "manager">("pharmacist");
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-
   const [directAddOpen, setDirectAddOpen] = useState(false);
   const [directEmail, setDirectEmail] = useState("");
   const [directRole, setDirectRole] = useState("pharmacist");
@@ -91,14 +77,12 @@ function StoreDetailContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const [sData, mData, iData] = await Promise.all([
+      const [sData, mData] = await Promise.all([
         getStoreDetailApi(storeId),
         getStoreMembersApi(storeId).catch(() => []),
-        getInvitationsApi({ store_id: storeId }).catch(() => []),
       ]);
       setStore(sData);
       setMembers(mData);
-      setInvitations(iData);
     } catch (err: any) {
       setError(err?.message || "Failed to load store branch details.");
     } finally {
@@ -153,35 +137,6 @@ function StoreDetailContent() {
     }
   };
 
-  // Invite Staff Handler
-  const handleInviteStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail.trim()) return;
-    setInviteLoading(true);
-    setInviteError(null);
-    try {
-      const invite = await createInvitationApi({
-        email: inviteEmail.trim().toLowerCase(),
-        store_id: storeId,
-        role: inviteRole,
-      });
-      setInviteModalOpen(false);
-      setInviteEmail("");
-      setSuccessMsg(
-        `Invitation created for ${invite.email}. ${
-          invite.emailDispatched
-            ? "Invitation email dispatched."
-            : "Available in Django dev console."
-        }`
-      );
-      await loadAll();
-    } catch (err: any) {
-      setInviteError(err?.message || "Failed to create invitation.");
-    } finally {
-      setInviteLoading(false);
-    }
-  };
-
   // Toggle Membership Status Handler
   const handleToggleMemberStatus = async (member: StoreMember) => {
     try {
@@ -194,28 +149,6 @@ function StoreDetailContent() {
       await loadAll();
     } catch (err: any) {
       setError(err?.message || "Failed to update membership status.");
-    }
-  };
-
-  // Resend Invite Handler
-  const handleResendInvite = async (invitationId: string) => {
-    try {
-      const res = await resendInvitationApi(invitationId);
-      setSuccessMsg(`Invitation resent to ${res.email}.`);
-      await loadAll();
-    } catch (err: any) {
-      setError(err?.message || "Failed to resend invitation.");
-    }
-  };
-
-  // Revoke Invite Handler
-  const handleRevokeInvite = async (invitationId: string) => {
-    try {
-      await revokeInvitationApi(invitationId);
-      setSuccessMsg("Invitation revoked successfully.");
-      await loadAll();
-    } catch (err: any) {
-      setError(err?.message || "Failed to revoke invitation.");
     }
   };
 
@@ -251,7 +184,7 @@ function StoreDetailContent() {
   return (
     <DashboardLayout
       title={store.name}
-      subtitle={`Branch Code: ${store.code} • Organization: ${store.organization_name || "Sushrusha"}`}
+      subtitle={`Branch Code: ${store.code} • Organization: ${store.organization_name || "DiracPharma"}`}
       action={
         <div className="flex items-center gap-2">
           <Link href="/dashboard/stores">
@@ -395,62 +328,7 @@ function StoreDetailContent() {
             </div>
           </div>
 
-          {/* Column 2: Assigned Manager Card */}
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Assigned Store Manager
-              </h3>
-              {isOwner && (
-                <button
-                  type="button"
-                  onClick={() => setAssignManagerOpen(true)}
-                  className="text-xs font-semibold text-[#0F766E] hover:underline"
-                >
-                  {store.manager ? "Change Manager" : "+ Assign Manager"}
-                </button>
-              )}
-            </div>
 
-            {store.manager ? (
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 text-[#0F766E] flex items-center justify-center font-bold text-sm uppercase">
-                    {store.manager_name?.charAt(0) || "M"}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm">
-                      {store.manager_name}
-                    </h4>
-                    <p className="text-slate-500 font-mono text-[11px]">
-                      {store.manager_email}
-                    </p>
-                  </div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600">
-                  Holds manager oversight and team management authorization for this store branch.
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-center space-y-2">
-                <User className="w-6 h-6 text-slate-400 mx-auto" />
-                <p className="text-xs font-semibold text-slate-700">No Manager Assigned</p>
-                <p className="text-[11px] text-slate-500">
-                  Assign an existing verified account or invite a new manager.
-                </p>
-                {isOwner && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAssignManagerOpen(true)}
-                    className="text-xs"
-                  >
-                    Assign Manager
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
 
           {/* Column 3: Quick Branch Stats */}
           <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-2xs space-y-4">
@@ -459,21 +337,21 @@ function StoreDetailContent() {
             </h3>
             <div className="space-y-2.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-600">Active Staff</span>
+                <span className="text-slate-600">Total Assigned Members</span>
                 <span className="font-bold text-slate-900 font-mono">
+                  {members.length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-600">Active Staff</span>
+                <span className="font-bold text-emerald-700 font-mono">
                   {members.filter((m) => m.is_active).length}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-600">Inactive Memberships</span>
+                <span className="text-slate-600">Inactive Staff</span>
                 <span className="font-bold text-slate-500 font-mono">
                   {members.filter((m) => !m.is_active).length}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-600">Pending Invitations</span>
-                <span className="font-bold text-amber-700 font-mono">
-                  {invitations.filter((i) => i.status === "pending").length}
                 </span>
               </div>
             </div>
@@ -481,23 +359,26 @@ function StoreDetailContent() {
             {canManage && (
               <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
                 <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setInviteModalOpen(true)}
-                  className="text-xs w-full"
-                >
-                  <UserPlus className="w-3.5 h-3.5 mr-1.5" />
-                  Invite Staff to this Branch
-                </Button>
-                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setDirectAddOpen(true)}
                   className="text-xs w-full"
                 >
                   <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-                  Direct Assign Existing User
+                  Assign Existing User
                 </Button>
+                {isOwner && (
+                  <Link href="/dashboard/team">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="text-xs w-full"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                      Create New Account
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -522,17 +403,21 @@ function StoreDetailContent() {
                   onClick={() => setDirectAddOpen(true)}
                   className="text-xs"
                 >
-                  Assign User
+                  <UserCheck className="w-3.5 h-3.5 mr-1" />
+                  Assign Existing User
                 </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setInviteModalOpen(true)}
-                  className="text-xs"
-                >
-                  <UserPlus className="w-3.5 h-3.5 mr-1" />
-                  Invite Staff
-                </Button>
+                {isOwner && (
+                  <Link href="/dashboard/team">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 mr-1" />
+                      Create New Account
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -598,100 +483,6 @@ function StoreDetailContent() {
             </div>
           )}
         </div>
-
-        {/* Pending Branch Invitations Table */}
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-2xs overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#E2E8F0] flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Pending Branch Invitations ({invitations.filter((i) => i.status === "pending").length})
-              </h3>
-              <p className="text-xs text-slate-500">
-                Single-use 24-hour invitation links issued for this branch
-              </p>
-            </div>
-          </div>
-
-          {invitations.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500">
-              No invitations recorded for this branch.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-[#E2E8F0] text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3">Invitee Email</th>
-                    <th className="px-6 py-3">Role</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Expires At</th>
-                    {canManage && <th className="px-6 py-3 text-right">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {invitations.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-3.5 font-mono text-slate-800 font-medium">
-                        {inv.email}
-                      </td>
-                      <td className="px-6 py-3.5 capitalize font-medium text-slate-700">
-                        {inv.role}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <StatusBadge
-                          status={
-                            inv.status === "pending"
-                              ? "pending"
-                              : inv.status === "accepted"
-                              ? "active"
-                              : inv.status === "expired"
-                              ? "expired"
-                              : "inactive"
-                          }
-                          label={inv.status.toUpperCase()}
-                        />
-                      </td>
-                      <td className="px-6 py-3.5 text-slate-500 text-[11px]">
-                        {new Date(inv.expires_at).toLocaleString()}
-                      </td>
-                      {canManage && (
-                        <td className="px-6 py-3.5 text-right space-x-2">
-                          {inv.status === "pending" && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleResendInvite(inv.id)}
-                                className="text-xs font-semibold text-[#0F766E] hover:underline"
-                              >
-                                Resend
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRevokeInvite(inv.id)}
-                                className="text-xs font-semibold text-rose-600 hover:underline"
-                              >
-                                Revoke
-                              </button>
-                            </>
-                          )}
-                          {inv.status === "expired" && (
-                            <button
-                              type="button"
-                              onClick={() => handleResendInvite(inv.id)}
-                              className="text-xs font-semibold text-[#0F766E] hover:underline"
-                            >
-                              Renew Invite
-                            </button>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ASSIGN MANAGER MODAL */}
@@ -700,7 +491,7 @@ function StoreDetailContent() {
           <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xl max-w-md w-full p-6 space-y-4">
             <h3 className="text-sm font-bold text-slate-900">Assign Store Manager</h3>
             <p className="text-xs text-slate-600">
-              Designate a verified user account as the operational store manager for{" "}
+              Designate a registered user account as the operational store manager for{" "}
               <strong>{store.name}</strong>.
             </p>
             {managerError && (
@@ -712,11 +503,11 @@ function StoreDetailContent() {
               <Input
                 label="Manager Email Address"
                 type="email"
-                placeholder="e.g. manager@sushrusha.com"
+                placeholder="e.g. manager@diracpharma.com"
                 required
                 value={managerEmail}
                 onChange={(e) => setManagerEmail(e.target.value)}
-                helperText="Must be an existing verified user account"
+                helperText="Must be an existing registered user account"
               />
               <div className="flex items-center justify-end gap-2 pt-2">
                 <Button
@@ -741,68 +532,6 @@ function StoreDetailContent() {
         </div>
       )}
 
-      {/* INVITE STAFF MODAL */}
-      {inviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">
-              Invite Staff to {store.name}
-            </h3>
-            <p className="text-xs text-slate-600">
-              Sends an invitation email with a secure 24-hour setup link for this branch.
-            </p>
-            {inviteError && (
-              <Alert variant="error" onClose={() => setInviteError(null)}>
-                {inviteError}
-              </Alert>
-            )}
-            <form onSubmit={handleInviteStaff} className="space-y-4">
-              <Input
-                label="Staff Email Address"
-                type="email"
-                placeholder="e.g. pharmacist@sushrusha.com"
-                required
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Intended Role
-                </label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-xl border border-[#E2E8F0] text-xs font-medium text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-[#0F766E]"
-                >
-                  <option value="pharmacist">Pharmacist</option>
-                  <option value="cashier">Cashier</option>
-                  <option value="staff">Staff Member</option>
-                  {isOwner && <option value="manager">Store Manager</option>}
-                </select>
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInviteModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  isLoading={inviteLoading}
-                >
-                  Send Invitation
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* DIRECT ADD EXISTING USER MODAL */}
       {directAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
@@ -811,7 +540,7 @@ function StoreDetailContent() {
               Direct Assign Existing User
             </h3>
             <p className="text-xs text-slate-600">
-              Grants branch membership to an already verified team member without requiring an invitation link.
+              Grants branch membership to an existing registered user account directly.
             </p>
             {directError && (
               <Alert variant="error" onClose={() => setDirectError(null)}>
@@ -822,7 +551,7 @@ function StoreDetailContent() {
               <Input
                 label="Registered User Email"
                 type="email"
-                placeholder="e.g. existing.pharmacist@sushrusha.com"
+                placeholder="e.g. existing.pharmacist@diracpharma.com"
                 required
                 value={directEmail}
                 onChange={(e) => setDirectEmail(e.target.value)}

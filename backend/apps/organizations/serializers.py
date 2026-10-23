@@ -1,5 +1,7 @@
 import re
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from apps.authentication.models import User
 from apps.organizations.models import Organization, Store, StoreMembership, OrganizationMembership
 
@@ -158,7 +160,7 @@ class DirectAddMemberSerializer(serializers.Serializer):
         user = User.objects.filter(email=val).first()
         if not user:
             raise serializers.ValidationError(
-                "No registered user found with this email. Use the invitation workflow to invite new team members."
+                "No registered user found with this email. Create a new employee account from the Team Management page or enter an existing user's email."
             )
         return val
 
@@ -168,3 +170,41 @@ class OrganizationSettingsSerializer(serializers.ModelSerializer):
         model = Organization
         fields = ["id", "name", "slug", "is_active", "created_at", "updated_at"]
         read_only_fields = ["id", "slug", "created_at", "updated_at"]
+
+
+class CreateEmployeeSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=255, required=True)
+    email = serializers.EmailField(required=True)
+    phone_number = serializers.CharField(max_length=30, required=False, allow_blank=True, default="")
+    role = serializers.ChoiceField(choices=StoreMembership.ROLE_CHOICES, required=True)
+    store_ids = serializers.ListField(child=serializers.UUIDField(), min_length=1, required=True)
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    def validate_email(self, value):
+        val = value.strip().lower()
+        if User.objects.filter(email=val).exists():
+            raise serializers.ValidationError(
+                "An account with this email address already exists.",
+                code="email_already_exists",
+            )
+        return val
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+
+        try:
+            validate_password(attrs["password"])
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"password": list(e.messages)})
+
+        return attrs
+
+
+class UpdateEmployeeSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=255, required=False)
+    phone_number = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    role = serializers.ChoiceField(choices=StoreMembership.ROLE_CHOICES, required=False)
+    store_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    is_active = serializers.BooleanField(required=False)

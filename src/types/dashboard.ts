@@ -142,8 +142,29 @@ export interface TeamMember {
   full_name: string;
   email: string;
   phone_number?: string;
-  is_email_verified: boolean;
+  role?: string;
+  is_active?: boolean;
+  is_email_verified?: boolean;
   created_at: string;
   store_assignments: TeamMemberStoreAssignment[];
 }
+
+export interface CreateEmployeePayload {
+  full_name: string;
+  email: string;
+  phone_number?: string;
+  role: "manager" | "pharmacist" | "cashier" | "staff";
+  store_ids: string[];
+  password: string;
+  confirm_password: string;
+}
+
+export interface UpdateEmployeePayload {
+  full_name?: string;
+  phone_number?: string;
+  role?: "manager" | "pharmacist" | "cashier" | "staff";
+  store_ids?: string[];
+  is_active?: boolean;
+}
+
 
