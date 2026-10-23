@@ -17,6 +17,10 @@ import {
   CreateEmployeePayload,
   UpdateEmployeePayload,
   AuditEventItem,
+  Product,
+  ProductCreatePayload,
+  ProductListResponse,
+  ProductMetadata,
 } from "@/types/dashboard";
 
 export function getApiBaseUrl(): string {
@@ -398,4 +402,69 @@ export async function getAuditLogsApi(params?: {
   const qStr = query.toString();
   return apiFetch<AuditEventItem[]>(`/audit/${qStr ? `?${qStr}` : ""}`);
 }
+
+// ---------------------------------------------------------------------------
+// Product Master APIs
+// ---------------------------------------------------------------------------
+
+export async function getProductsApi(params?: {
+  search?: string;
+  category?: string;
+  item_type?: string;
+  dosage_form?: string;
+  prescription_class?: string;
+  status?: string;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ProductListResponse> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.category && params.category !== "all") query.append("category", params.category);
+  if (params?.item_type && params.item_type !== "all") query.append("item_type", params.item_type);
+  if (params?.dosage_form && params.dosage_form !== "all") query.append("dosage_form", params.dosage_form);
+  if (params?.prescription_class && params.prescription_class !== "all") query.append("prescription_class", params.prescription_class);
+  if (params?.status) query.append("status", params.status);
+  if (params?.ordering) query.append("ordering", params.ordering);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+
+  const qStr = query.toString();
+  return apiFetch<ProductListResponse>(`/products/${qStr ? `?${qStr}` : ""}`);
+}
+
+export async function getProductDetailApi(id: string): Promise<Product> {
+  return apiFetch<Product>(`/products/${id}/`);
+}
+
+export async function createProductApi(payload: ProductCreatePayload): Promise<Product> {
+  return apiFetch<Product>("/products/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateProductApi(id: string, payload: Partial<ProductCreatePayload>): Promise<Product> {
+  return apiFetch<Product>(`/products/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function archiveProductApi(id: string): Promise<{ message: string; id: string; is_active: boolean }> {
+  return apiFetch<{ message: string; id: string; is_active: boolean }>(`/products/${id}/archive/`, {
+    method: "POST",
+  });
+}
+
+export async function reactivateProductApi(id: string): Promise<{ message: string; id: string; is_active: boolean }> {
+  return apiFetch<{ message: string; id: string; is_active: boolean }>(`/products/${id}/reactivate/`, {
+    method: "POST",
+  });
+}
+
+export async function getProductMetadataApi(): Promise<ProductMetadata> {
+  return apiFetch<ProductMetadata>("/products/metadata/");
+}
+
 

@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     "apps.authentication.apps.AuthenticationConfig",
     "apps.organizations.apps.OrganizationsConfig",
     "apps.invitations.apps.InvitationsConfig",
+    "apps.products.apps.ProductsConfig",
+    "apps.inventory.apps.InventoryConfig",
     "apps.audit.apps.AuditConfig",
 ]
 

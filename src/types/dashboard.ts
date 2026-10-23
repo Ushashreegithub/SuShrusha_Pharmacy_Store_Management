@@ -167,4 +167,84 @@ export interface UpdateEmployeePayload {
   is_active?: boolean;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  brand_name: string;
+  generic_name: string;
+  sku: string;
+  barcode: string;
+  hsn_code: string;
+  item_type: string;
+  item_type_display?: string;
+  category: string;
+  category_display?: string;
+  manufacturer: string;
+  strength: string;
+  dosage_form: string;
+  dosage_form_display?: string;
+  prescription_class: string;
+  prescription_class_display?: string;
+  is_narcotic: boolean;
+  pack_description: string;
+  base_unit: string;
+  sale_unit: string;
+  conversion_factor: number;
+  is_loose_dispensing_allowed: boolean;
+  gst_rate: string | number;
+  storage_condition: string;
+  storage_condition_display?: string;
+  description?: string;
+  is_active: boolean;
+  created_by?: string;
+  created_by_name?: string | null;
+  updated_by?: string;
+  updated_by_name?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductCreatePayload {
+  name: string;
+  brand_name?: string;
+  generic_name?: string;
+  sku: string;
+  barcode?: string;
+  hsn_code?: string;
+  item_type?: string;
+  category: string;
+  manufacturer?: string;
+  strength?: string;
+  dosage_form?: string;
+  prescription_class?: string;
+  is_narcotic?: boolean;
+  pack_description?: string;
+  base_unit?: string;
+  sale_unit?: string;
+  conversion_factor?: number;
+  is_loose_dispensing_allowed?: boolean;
+  gst_rate?: string | number;
+  storage_condition?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface ProductListResponse {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+  results: Product[];
+}
+
+export interface ProductMetadata {
+  categories: { value: string; label: string }[];
+  item_types: { value: string; label: string }[];
+  dosage_forms: { value: string; label: string }[];
+  prescription_classes: { value: string; label: string }[];
+  units: { value: string; label: string }[];
+  storage_conditions: { value: string; label: string }[];
+}
+
+
 

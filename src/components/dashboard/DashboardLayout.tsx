@@ -84,6 +84,13 @@ export function DashboardLayout({
       visible: isOwner || isManager,
     },
     {
+      label: "Product Catalog",
+      href: "/dashboard/products",
+      icon: Package,
+      active: pathname.startsWith("/dashboard/products"),
+      visible: true,
+    },
+    {
       label: "Team Management",
       href: "/dashboard/team",
       icon: Users,
