@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DiracPharma — Intelligent Pharmacy Management by DiracAI Services",
+  title: "PharmaPro — Intelligent Pharmacy Management by DiracAI Services",
   description:
-    "Intelligent Management. Better Pharmacy Operations. DiracPharma is an enterprise pharmacy store management system by DiracAI Services.",
+    "Intelligent Management. Better Pharmacy Operations. PharmaPro is an enterprise pharmacy store management system by DiracAI Services.",
   icons: {
     icon: "/favicon.ico",
   },

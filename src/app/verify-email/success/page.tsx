@@ -12,18 +12,18 @@ function EmailVerifiedSuccessContent() {
   const searchParams = useSearchParams();
   const queryEmail = searchParams.get("email");
 
-  const [verifiedEmail, setVerifiedEmail] = useState(queryEmail || "owner@diracpharma.com");
-  const [organization, setOrganization] = useState("Dirac Healthcare Pharmacy");
+  const [verifiedEmail, setVerifiedEmail] = useState(queryEmail || "owner@pharmaPro.com");
+  const [organization, setOrganization] = useState("PharmaPro Healthcare Pharmacy");
 
   useEffect(() => {
     let email = queryEmail;
     if (!email && typeof window !== "undefined") {
       email =
-        sessionStorage.getItem("diracpharma_verified_email") ||
+        sessionStorage.getItem("pharmaPro_verified_email") ||
         sessionStorage.getItem("sushrusha_verified_email") ||
-        sessionStorage.getItem("diracpharma_pending_email") ||
+        sessionStorage.getItem("pharmaPro_pending_email") ||
         sessionStorage.getItem("sushrusha_pending_email") ||
-        "owner@diracpharma.com";
+        "owner@pharmaPro.com";
     }
     if (email) {
       setVerifiedEmail(email);
@@ -31,7 +31,7 @@ function EmailVerifiedSuccessContent() {
 
     if (typeof window !== "undefined") {
       const storedOrg =
-        sessionStorage.getItem("diracpharma_pending_org") ||
+        sessionStorage.getItem("pharmaPro_pending_org") ||
         sessionStorage.getItem("sushrusha_pending_org");
       if (storedOrg) {
         setOrganization(storedOrg);
@@ -47,7 +47,7 @@ function EmailVerifiedSuccessContent() {
         </div>
       }
       title="Email Verified Successfully"
-      subtitle="Your corporate email address has been verified. Your pharmacy owner account is now active in DiracPharma."
+      subtitle="Your corporate email address has been verified. Your pharmacy owner account is now active in PharmaPro."
       footer={
         <div className="text-xs text-slate-500">
           Need to register a different business?{" "}

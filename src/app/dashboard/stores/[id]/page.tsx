@@ -184,7 +184,7 @@ function StoreDetailContent() {
   return (
     <DashboardLayout
       title={store.name}
-      subtitle={`Branch Code: ${store.code} • Organization: ${store.organization_name || "DiracPharma"}`}
+      subtitle={`Branch Code: ${store.code} • Organization: ${store.organization_name || "PharmaPro"}`}
       action={
         <div className="flex items-center gap-2">
           <Link href="/dashboard/stores">
@@ -503,7 +503,7 @@ function StoreDetailContent() {
               <Input
                 label="Manager Email Address"
                 type="email"
-                placeholder="e.g. manager@diracpharma.com"
+                placeholder="e.g. manager@PharmaPro.com"
                 required
                 value={managerEmail}
                 onChange={(e) => setManagerEmail(e.target.value)}
@@ -551,7 +551,7 @@ function StoreDetailContent() {
               <Input
                 label="Registered User Email"
                 type="email"
-                placeholder="e.g. existing.pharmacist@diracpharma.com"
+                placeholder="e.g. existing.pharmacist@PharmaPro.com"
                 required
                 value={directEmail}
                 onChange={(e) => setDirectEmail(e.target.value)}

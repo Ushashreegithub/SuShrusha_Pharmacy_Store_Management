@@ -33,7 +33,7 @@ export const PharmacyImage: React.FC<PharmacyImageProps> = ({
           </div>
           <div className="space-y-1">
             <h4 className="font-bold text-sm tracking-tight text-white">
-              DiracPharma Operations
+              PharmaPro Operations
             </h4>
             <p className="text-[11px] text-teal-100 max-w-xs leading-relaxed">
               Intelligent Management. Better Pharmacy Operations.

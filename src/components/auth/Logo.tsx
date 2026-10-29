@@ -58,7 +58,7 @@ export const Logo: React.FC<LogoProps> = ({
         <span
           className={`font-bold text-[#164E63] leading-none ${textSizes[size]}`}
         >
-          Dirac<span className="text-[#0F766E] font-semibold">Pharma</span>
+          Pharma<span className="text-[#0F766E] font-semibold">Pro</span>
         </span>
         {withTagline && (
           <span className="text-[11px] text-slate-500 font-medium mt-0.5">

@@ -14,10 +14,12 @@ from apps.organizations.serializers import (
     StoreMembershipSerializer,
     DirectAddMemberSerializer,
     OrganizationSettingsSerializer,
+    OrganizationBrandingSerializer,
     CreateEmployeeSerializer,
     UpdateEmployeeSerializer,
 )
 from apps.organizations.permissions import IsOrganizationOwner
+from apps.organizations.validators import validate_org_logo, safe_delete_logo_file
 
 
 def get_user_organization(user):
@@ -943,7 +945,7 @@ class OrganizationSettingsView(APIView):
         org = get_user_organization(user)
         if not org:
             return Response({"detail": "Organization not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(OrganizationSettingsSerializer(org).data, status=status.HTTP_200_OK)
+        return Response(OrganizationSettingsSerializer(org, context={"request": request}).data, status=status.HTTP_200_OK)
 
     def patch(self, request):
         user = request.user
@@ -951,7 +953,7 @@ class OrganizationSettingsView(APIView):
         if not org:
             return Response({"detail": "Only owners can update organization settings."}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = OrganizationSettingsSerializer(org, data=request.data, partial=True)
+        serializer = OrganizationSettingsSerializer(org, data=request.data, partial=True, context={"request": request})
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -965,4 +967,112 @@ class OrganizationSettingsView(APIView):
                 details=request.data,
             )
 
-        return Response(OrganizationSettingsSerializer(updated_org).data, status=status.HTTP_200_OK)
+        return Response(OrganizationSettingsSerializer(updated_org, context={"request": request}).data, status=status.HTTP_200_OK)
+
+
+class OrganizationBrandingView(APIView):
+    """
+    GET: Retrieve branding (id, name, slug, logo_url) for the user's authorized organization.
+    Accessible to owners and store staff for their respective active organization.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        # 1. Check Owner membership
+        org = get_user_organization(user)
+        if not org:
+            # 2. Check store membership
+            membership = StoreMembership.objects.filter(
+                user=user, is_active=True
+            ).select_related("store__organization").first()
+            if membership and membership.store:
+                org = membership.store.organization
+
+        if not org:
+            return Response(
+                {"detail": "No active organization found for this user account."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = OrganizationBrandingSerializer(org, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrganizationLogoView(APIView):
+    """
+    POST: Upload or replace the organization logo (multipart/form-data).
+    DELETE: Remove the organization logo.
+    Restricted strictly to authorized Organization Owners.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        org = get_user_organization(user)
+        if not org:
+            return Response(
+                {"detail": "Only organization owners are authorized to manage organization branding."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        uploaded_file = request.FILES.get("logo") or request.FILES.get("file")
+        if not uploaded_file:
+            return Response(
+                {"detail": "No logo image file was provided in the upload request."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate file size, extension, MIME, and image integrity via Pillow
+        validate_org_logo(uploaded_file)
+
+        old_logo = org.logo
+        with transaction.atomic():
+            org.logo = uploaded_file
+            org.save(update_fields=["logo", "updated_at"])
+
+            # Clean up previous logo file safely
+            safe_delete_logo_file(old_logo)
+
+            AuditEvent.log_event(
+                event_type="ORGANIZATION_LOGO_UPLOADED",
+                request=request,
+                user=user,
+                organization=org,
+                details={
+                    "filename": uploaded_file.name,
+                    "size_bytes": uploaded_file.size,
+                    "content_type": getattr(uploaded_file, "content_type", "image/*"),
+                },
+            )
+
+        serializer = OrganizationBrandingSerializer(org, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        user = request.user
+        org = get_user_organization(user)
+        if not org:
+            return Response(
+                {"detail": "Only organization owners are authorized to manage organization branding."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        old_logo = org.logo
+        with transaction.atomic():
+            org.logo = None
+            org.save(update_fields=["logo", "updated_at"])
+
+            safe_delete_logo_file(old_logo)
+
+            AuditEvent.log_event(
+                event_type="ORGANIZATION_LOGO_REMOVED",
+                request=request,
+                user=user,
+                organization=org,
+                details={"action": "removed"},
+            )
+
+        serializer = OrganizationBrandingSerializer(org, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

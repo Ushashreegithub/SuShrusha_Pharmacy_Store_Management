@@ -1,7 +1,19 @@
+import os
 import uuid
 from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
+
+
+def org_logo_upload_path(instance, filename):
+    """
+    Generate unique, sanitized file path for organization logo:
+    org_logos/<org_id>_<uuid>.<ext>
+    """
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in [".png", ".jpg", ".jpeg", ".webp"]:
+        ext = ".png"
+    return f"org_logos/{instance.id}_{uuid.uuid4().hex[:8]}{ext}"
 
 
 class Organization(models.Model):
@@ -12,6 +24,7 @@ class Organization(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
+    logo = models.ImageField(upload_to=org_logo_upload_path, null=True, blank=True)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

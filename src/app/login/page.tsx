@@ -108,7 +108,7 @@ function LoginContent() {
   return (
     <AuthSplitLayout
       title="Sign In to Your Account"
-      subtitle="Access your DiracPharma store dashboard and multi-branch operations."
+      subtitle="Access your PharmaPro store dashboard and multi-branch operations."
     >
       <div className="space-y-4">
         {/* Development-Only Sample Presets (Gated for development only) */}
@@ -199,7 +199,7 @@ function LoginContent() {
             label="Business Email"
             type="email"
             name="email"
-            placeholder="e.g. owner@diracpharma.com"
+            placeholder="e.g. owner@PharmaPro.com"
             required
             value={email}
             onChange={(e) => {

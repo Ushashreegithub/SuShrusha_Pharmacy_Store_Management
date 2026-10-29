@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.invitations.apps.InvitationsConfig",
     "apps.products.apps.ProductsConfig",
     "apps.inventory.apps.InventoryConfig",
+    "apps.billing.apps.BillingConfig",
     "apps.audit.apps.AuditConfig",
 ]
 
@@ -112,6 +113,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Media files (User-uploaded assets like Organization Logos)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+MAX_UPLOAD_SIZE = 2 * 1024 * 1024  # 2MB maximum file upload
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Django REST Framework Configuration
@@ -174,6 +180,7 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "idempotency-key",
 ]
 
 # Cookie Security & SameSite settings

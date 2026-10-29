@@ -33,12 +33,12 @@ class Milestone2BTests(TransactionTestCase):
 
         # 1. Organization A and Owner
         self.owner = User.objects.create_user(
-            email="owner_2b@diracpharma.test",
+            email="owner_2b@pharmaPro.test",
             password="StrongPassword123!",
             full_name="Owner TwoB"
         )
         self.org = Organization.objects.create(
-            name="DiracPharma TwoB Org",
+            name="PharmaPro TwoB Org",
             owner=self.owner
         )
         OrganizationMembership.objects.create(
@@ -62,7 +62,7 @@ class Milestone2BTests(TransactionTestCase):
 
         # 3. Store Manager (assigned to Store 1 only)
         self.manager = User.objects.create_user(
-            email="manager_2b@diracpharma.test",
+            email="manager_2b@pharmaPro.test",
             password="StrongPassword123!",
             full_name="Store Manager TwoB"
         )
@@ -75,7 +75,7 @@ class Milestone2BTests(TransactionTestCase):
 
         # 4. Pharmacist / Staff (assigned to Store 1, read-only cost)
         self.pharmacist = User.objects.create_user(
-            email="pharmacist_2b@diracpharma.test",
+            email="pharmacist_2b@pharmaPro.test",
             password="StrongPassword123!",
             full_name="Pharmacist TwoB"
         )
@@ -88,7 +88,7 @@ class Milestone2BTests(TransactionTestCase):
 
         # 5. Organization B (external organization)
         self.other_owner = User.objects.create_user(
-            email="other_owner_2b@diracpharma.test",
+            email="other_owner_2b@pharmaPro.test",
             password="StrongPassword123!",
             full_name="Other Owner"
         )

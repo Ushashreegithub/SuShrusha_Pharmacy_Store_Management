@@ -30,12 +30,12 @@ class InventoryFoundationTests(TransactionTestCase):
     def setUp(self):
         # 1. Setup primary organization and user
         self.owner = User.objects.create_user(
-            email="owner_inv@diracpharma.test",
+            email="owner_inv@pharmaPro.test",
             password="StrongPassword123!",
             full_name="Inventory Owner"
         )
         self.org = Organization.objects.create(
-            name="DiracPharma Central Org",
+            name="PharmaPro Central Org",
             owner=self.owner
         )
         self.store = Store.objects.create(
@@ -46,7 +46,7 @@ class InventoryFoundationTests(TransactionTestCase):
 
         # 2. Setup secondary organization for tenant isolation tests
         self.other_owner = User.objects.create_user(
-            email="other_inv@diracpharma.test",
+            email="other_inv@pharmaPro.test",
             password="StrongPassword123!",
             full_name="Other Owner"
         )

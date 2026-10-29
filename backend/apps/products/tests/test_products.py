@@ -16,7 +16,7 @@ class ProductMasterTestCase(TestCase):
 
         # 1. Organization A (Primary)
         self.owner_a = User.objects.create_user(
-            email="owner.a@diracpharma.com",
+            email="owner.a@pharmaPro.com",
             password="StrongPassword@2026",
             full_name="Dr. Owner A",
             phone_number="+91 98765 00001",
@@ -41,7 +41,7 @@ class ProductMasterTestCase(TestCase):
 
         # Manager in Org A
         self.manager_a = User.objects.create_user(
-            email="manager.a@diracpharma.com",
+            email="manager.a@PharmaPro.com",
             password="StrongPassword@2026",
             full_name="Manager Alice",
             phone_number="+91 98765 00002",
@@ -56,7 +56,7 @@ class ProductMasterTestCase(TestCase):
 
         # Pharmacist in Org A
         self.pharmacist_a = User.objects.create_user(
-            email="pharmacist.a@diracpharma.com",
+            email="pharmacist.a@PharmaPro.com",
             password="StrongPassword@2026",
             full_name="Pharmacist Bob",
             phone_number="+91 98765 00003",
@@ -71,7 +71,7 @@ class ProductMasterTestCase(TestCase):
 
         # 2. Organization B (Isolated Tenant)
         self.owner_b = User.objects.create_user(
-            email="owner.b@diracpharma.com",
+            email="owner.b@PharmaPro.com",
             password="StrongPassword@2026",
             full_name="Dr. Owner B",
             phone_number="+91 98765 00004",

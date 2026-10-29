@@ -438,7 +438,7 @@ function TeamManagementContent() {
                 <Input
                   label="Email Address"
                   type="email"
-                  placeholder="ramesh@diracpharma.com"
+                  placeholder="ramesh@PharmaPro.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);

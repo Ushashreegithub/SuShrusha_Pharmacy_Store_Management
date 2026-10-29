@@ -165,11 +165,38 @@ class DirectAddMemberSerializer(serializers.Serializer):
         return val
 
 
-class OrganizationSettingsSerializer(serializers.ModelSerializer):
+class OrganizationBrandingSerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Organization
-        fields = ["id", "name", "slug", "is_active", "created_at", "updated_at"]
-        read_only_fields = ["id", "slug", "created_at", "updated_at"]
+        fields = ["id", "name", "slug", "logo_url"]
+        read_only_fields = ["id", "name", "slug", "logo_url"]
+
+    def get_logo_url(self, obj):
+        if not obj.logo:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.logo.url)
+        return obj.logo.url
+
+
+class OrganizationSettingsSerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Organization
+        fields = ["id", "name", "slug", "logo_url", "is_active", "created_at", "updated_at"]
+        read_only_fields = ["id", "slug", "logo_url", "created_at", "updated_at"]
+
+    def get_logo_url(self, obj):
+        if not obj.logo:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.logo.url)
+        return obj.logo.url
 
 
 class CreateEmployeeSerializer(serializers.Serializer):

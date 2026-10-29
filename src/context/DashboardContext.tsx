@@ -6,8 +6,16 @@ import { UserProfile } from "@/types/auth";
 import { Store } from "@/types/dashboard";
 import { getCurrentUserApi, getStoresApi, logoutApi } from "@/lib/api";
 
+export interface ActiveOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+}
+
 interface DashboardContextType {
   user: UserProfile | null;
+  organization: ActiveOrganization | null;
   stores: Store[];
   activeStore: Store | null;
   activeStoreId: string | null;
@@ -59,7 +67,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const setActiveStoreId = (id: string) => {
     setActiveStoreIdState(id);
     if (typeof window !== "undefined") {
-      localStorage.setItem("diracpharma_active_store", id);
+      localStorage.setItem("pharmapro_active_store", id);
       localStorage.setItem("sushrusha_active_store", id);
     }
   };
@@ -71,7 +79,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       // Ignore network errors on logout
     } finally {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("diracpharma_active_store");
+        localStorage.removeItem("pharmapro_active_store");
         localStorage.removeItem("sushrusha_active_store");
       }
       router.push("/login");
@@ -101,7 +109,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         // Saved active store
         const savedStoreId =
           typeof window !== "undefined"
-            ? localStorage.getItem("diracpharma_active_store") ||
+            ? localStorage.getItem("pharmapro_active_store") ||
               localStorage.getItem("sushrusha_active_store")
             : null;
         if (savedStoreId && storeList.some((s) => s.id === savedStoreId)) {
@@ -127,10 +135,34 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const activeStore = stores.find((s) => s.id === activeStoreId) || null;
 
+  const organization: ActiveOrganization | null = React.useMemo(() => {
+    if (!user) return null;
+    if (user.organizations && user.organizations.length > 0) {
+      const org = user.organizations[0];
+      return {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        logo_url: org.logo_url || null,
+      };
+    }
+    if (user.stores && user.stores.length > 0) {
+      const st = user.stores[0];
+      return {
+        id: st.organization_id || "",
+        name: st.organization_name || "Pharmacy Entity",
+        slug: "",
+        logo_url: st.organization_logo_url || null,
+      };
+    }
+    return null;
+  }, [user]);
+
   return (
     <DashboardContext.Provider
       value={{
         user,
+        organization,
         stores,
         activeStore,
         activeStoreId,

@@ -204,7 +204,7 @@ function DashboardOverviewContent() {
               </div>
               <div className="max-w-md mx-auto space-y-1">
                 <h3 className="text-base font-bold text-slate-900">
-                  Welcome to DiracPharma!
+                  Welcome to PharmaPro!
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Your business organization is ready. Create your first pharmacy branch to

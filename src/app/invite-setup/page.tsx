@@ -22,7 +22,7 @@ function InviteSetupContent() {
             Direct Account Provisioning Active
           </h2>
           <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
-            DiracPharma has retired employee invitation links. All manager and staff
+            PharmaPro has retired employee invitation links. All manager and staff
             accounts are provisioned directly by your business owner with your email
             and initial login credentials.
           </p>
@@ -32,7 +32,7 @@ function InviteSetupContent() {
           <div className="font-semibold text-slate-800">How to sign in:</div>
           <ul className="list-disc list-inside space-y-1 text-slate-600">
             <li>Obtain your login email and initial password from your store owner.</li>
-            <li>Proceed to the DiracPharma sign-in screen.</li>
+            <li>Proceed to the PharmaPro sign-in screen.</li>
             <li>Sign in directly to access your authorized pharmacy store branches.</li>
           </ul>
         </div>

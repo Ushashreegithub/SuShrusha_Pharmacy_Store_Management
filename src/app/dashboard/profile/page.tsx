@@ -128,7 +128,7 @@ function ProfileContent() {
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
               <span className="text-slate-400 block text-[11px]">Organization</span>
               <span className="font-semibold text-slate-800">
-                {user?.organizations?.[0]?.name || "DiracPharma Group"}
+                {user?.organizations?.[0]?.name || "PharmaPro Group"}
               </span>
             </div>
 

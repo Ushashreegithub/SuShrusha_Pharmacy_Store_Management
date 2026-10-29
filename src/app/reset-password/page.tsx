@@ -181,7 +181,7 @@ function ResetPasswordContent() {
         </div>
       }
       title="Create New Password"
-      subtitle="Enter a new password for your DiracPharma account."
+      subtitle="Enter a new password for your PharmaPro account."
       footer={
         <Link
           href="/login"

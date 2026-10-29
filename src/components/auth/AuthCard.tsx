@@ -71,7 +71,7 @@ export const AuthCard: React.FC<AuthCardProps> = ({
 
       {/* Footer copyright */}
       <footer className="text-center text-xs text-slate-400 mt-10 select-none">
-        <p>© {new Date().getFullYear()} DiracPharma by DiracAI Services. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} PharmaPro by DiracAI Services. All rights reserved.</p>
         <p className="text-[11px] text-slate-400 mt-0.5">Secure Multi-Branch Architecture</p>
       </footer>
     </div>

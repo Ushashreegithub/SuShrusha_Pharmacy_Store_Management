@@ -59,8 +59,8 @@ export default function OwnerRegistrationPage() {
   const handleAutofill = () => {
     setFormData({
       fullName: "Dr. Rajesh Nayak",
-      organizationName: "Dirac Healthcare Pharmacy",
-      email: "rajesh.nayak@diracpharma.com",
+      organizationName: "Healthcare Pharmacy",
+      email: "rajesh.nayak@pharmacy.com",
       phoneNumber: "+91 98765 43210",
       password: "PharmacyOwner@2026",
       confirmPassword: "PharmacyOwner@2026",
@@ -135,8 +135,8 @@ export default function OwnerRegistrationPage() {
 
       // Save non-sensitive metadata for session reference
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("diracpharma_pending_email", res.email);
-        sessionStorage.setItem("diracpharma_pending_org", res.organizationName);
+        sessionStorage.setItem("pharmaPro_pending_email", res.email);
+        sessionStorage.setItem("pharmaPro_pending_org", res.organizationName);
         sessionStorage.setItem("sushrusha_pending_email", res.email);
         sessionStorage.setItem("sushrusha_pending_org", res.organizationName);
       }
@@ -240,7 +240,7 @@ export default function OwnerRegistrationPage() {
           <Input
             label="Pharmacy / Business Name"
             name="organizationName"
-            placeholder="e.g. Dirac Healthcare Pharmacy"
+            placeholder="e.g. Healthcare Pharmacy"
             required
             value={formData.organizationName}
             onChange={handleChange}
@@ -253,7 +253,7 @@ export default function OwnerRegistrationPage() {
             label="Business Email"
             type="email"
             name="email"
-            placeholder="e.g. owner@diracpharma.com"
+            placeholder="e.g. owner@gmail.com"
             required
             value={formData.email}
             onChange={handleChange}

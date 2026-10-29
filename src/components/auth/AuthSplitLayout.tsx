@@ -104,7 +104,7 @@ export const AuthSplitLayout: React.FC<AuthSplitLayoutProps> = ({
 
       {/* Footer copyright */}
       <footer className="max-w-5xl mx-auto w-full text-center text-xs text-slate-400 mt-6 select-none">
-        <p>© {new Date().getFullYear()} DiracPharma by DiracAI Services. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} PharmaPro by DiracAI Services. All rights reserved.</p>
       </footer>
     </div>
   );

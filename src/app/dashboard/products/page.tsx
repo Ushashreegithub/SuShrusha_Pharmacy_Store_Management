@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import {
   Package,
   Plus,
@@ -38,6 +39,7 @@ import {
   reactivateProductApi,
   getProductMetadataApi,
   ApiError,
+  extractList,
 } from "@/lib/api";
 import { Product, ProductCreatePayload, ProductMetadata } from "@/types/dashboard";
 
@@ -219,9 +221,9 @@ function ProductsContent() {
         page,
         page_size: pageSize,
       });
-      setProducts(data.results);
-      setTotalPages(data.total_pages || 1);
-      setTotalCount(data.count || 0);
+      setProducts(extractList(data));
+      setTotalPages(data?.total_pages || 1);
+      setTotalCount(data?.count || 0);
     } catch (err: any) {
       setError(err?.message || "Failed to load product catalog.");
     } finally {
@@ -390,8 +392,8 @@ function ProductsContent() {
 
   return (
     <DashboardLayout
-      title="Product Master Catalog"
-      subtitle="Central pharmaceutical, OTC, and surgical inventory catalog for all organization branches."
+      title="Find Medicines & Stock"
+      subtitle="Search medications, check store stock balances, view active batches & expiry dates, and manage product catalog details."
       action={
         <div className="flex items-center gap-2">
           <Button
@@ -409,7 +411,7 @@ function ProductsContent() {
               variant="primary"
               size="sm"
               onClick={handleOpenAddModal}
-              className="text-xs"
+              className="text-xs bg-[#0F766E] hover:bg-[#115E59]"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
               Add Product
@@ -419,6 +421,23 @@ function ProductsContent() {
       }
     >
       <div className="space-y-4">
+        {/* Navigation Tabs between Product Master and Batches & Expiry */}
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+          <Link
+            href="/dashboard/products"
+            className="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-[#0F766E] text-white shadow-xs flex items-center gap-2"
+          >
+            <Package className="w-3.5 h-3.5" />
+            Medicine Catalog
+          </Link>
+          <Link
+            href="/dashboard/batches"
+            className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Batches & Expiry (FEFO)
+          </Link>
+        </div>
         {/* Alerts */}
         {successMsg && (
           <Alert variant="success" onClose={() => setSuccessMsg(null)}>

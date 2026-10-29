@@ -68,7 +68,7 @@ export default function HomePage() {
               href="#about"
               className="hover:text-[#0F766E] transition-colors"
             >
-              Why DiracPharma
+              Why PharmaPro
             </a>
             <a
               href="#contact"
@@ -84,7 +84,7 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs font-semibold px-4 text-slate-700"
+                className="text-xs bold px-4 text-slate-700"
               >
                 Login
               </Button>
@@ -93,10 +93,9 @@ export default function HomePage() {
               <Button
                 variant="primary"
                 size="sm"
-                className="text-xs font-semibold px-4 bg-[#0F766E] hover:bg-[#0D645D]"
+                className="text-xs font-bold px-3 bg-[#0F766E] hover:bg-[#0D645D]"
               >
                 <span>Register</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </Link>
           </div>
@@ -149,7 +148,7 @@ export default function HomePage() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2 rounded-lg hover:bg-slate-50 hover:text-[#0F766E]"
               >
-                Why DiracPharma
+                Why PharmaPro
               </a>
               <a
                 href="#contact"
@@ -212,10 +211,9 @@ export default function HomePage() {
                   <Button
                     variant="primary"
                     size="lg"
-                    className="w-full sm:w-auto px-7 py-3.5 text-sm font-bold bg-[#0F766E] hover:bg-[#0D645D] shadow-md shadow-teal-900/10"
+                    className="w-full sm:w-auto px-3 py-3 text-sm font-bold bg-[#0F766E] hover:bg-[#0D645D] shadow-md shadow-teal-900/10"
                   >
                     <span>Register Now</span>
-                    <ArrowRight className="w-4 h-4 ml-2.5" />
                   </Button>
                 </Link>
 
@@ -627,7 +625,7 @@ export default function HomePage() {
             <div id="solutions" className="lg:col-span-7 order-1 lg:order-2 space-y-6">
               <div className="space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E] bg-teal-50 px-3 py-1 rounded-full border border-teal-200 inline-block">
-                  Why DiracPharma
+                  Why PharmaPro
                 </span>
                 <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
                   Built for Pharmacies. Designed for Growth.
@@ -635,7 +633,7 @@ export default function HomePage() {
               </div>
 
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                DiracPharma, an intelligent pharmacy management product by DiracAI Services,
+                PharmaPro, an intelligent pharmacy management product by DiracAI Services,
                 helps pharmacy owners organize their branches, manage team access, and bring
                 essential pharmacy workflows into one unified platform. Its role-based design
                 supports owners, managers, and employees while keeping access aligned with
@@ -846,7 +844,6 @@ export default function HomePage() {
                 className="w-full sm:w-auto px-8 py-3.5 text-sm font-bold bg-[#0F766E] hover:bg-[#0D645D] text-white border border-teal-400/30 shadow-lg shadow-teal-950/20"
               >
                 <span>Register Now</span>
-                <ArrowRight className="w-4 h-4 ml-1.5" />
               </Button>
             </Link>
 
@@ -915,7 +912,7 @@ export default function HomePage() {
                 />
                 <div className="flex flex-col text-left">
                   <span className="font-bold text-white text-base tracking-tight leading-tight">
-                    Dirac<span className="text-teal-400 font-semibold">Pharma</span>
+                   Pharma<span className="text-teal-400 font-semibold">Pro</span>
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium">by DiracAI Services</span>
                 </div>
@@ -949,7 +946,7 @@ export default function HomePage() {
                 </li>
                 <li>
                   <a href="#about" className="hover:text-teal-400 transition-colors">
-                    Why DiracPharma
+                    Why PharmaPro
                   </a>
                 </li>
                 <li>
@@ -1013,7 +1010,7 @@ export default function HomePage() {
           {/* Bottom Copyright & Status */}
           <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
             <div>
-              &copy; {new Date().getFullYear()} Sushrusha Pharmacy Management System. All rights reserved.
+              &copy; {new Date().getFullYear()} PharmaPro Management System. All rights reserved.
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />

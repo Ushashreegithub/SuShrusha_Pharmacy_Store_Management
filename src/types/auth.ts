@@ -46,6 +46,7 @@ export interface OrganizationInfo {
   slug: string;
   role: string;
   is_owner: boolean;
+  logo_url?: string | null;
 }
 
 export interface StoreInfo {
@@ -59,6 +60,7 @@ export interface StoreInfo {
   phone?: string;
   organization_id?: string;
   organization_name?: string;
+  organization_logo_url?: string | null;
 }
 
 export interface UserProfile {

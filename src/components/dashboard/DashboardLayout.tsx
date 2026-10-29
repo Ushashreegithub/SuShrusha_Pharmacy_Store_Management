@@ -23,6 +23,15 @@ import {
   ShoppingCart,
   FileText,
   Lock,
+  ArrowLeftRight,
+  SlidersHorizontal,
+  ClipboardList,
+  ShieldAlert,
+  AlertTriangle,
+  AlertOctagon,
+  Truck,
+  Layers,
+  Receipt,
 } from "lucide-react";
 import { Logo } from "@/components/auth/Logo";
 import { StatusBadge } from "@/components/auth/StatusBadge";
@@ -42,19 +51,20 @@ export function DashboardLayout({
   action,
 }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user, stores, activeStore, setActiveStoreId, isLoading, handleLogout } =
+  const { user, organization, stores, activeStore, setActiveStoreId, isLoading, handleLogout } =
     useDashboard();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [logoImageFailed, setLogoImageFailed] = useState(false);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
         <div className="w-9 h-9 border-3 border-[#0F766E] border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-sm font-medium text-slate-600">
-          Loading DiracPharma Workspace...
+          Loading Workspace...
         </p>
       </div>
     );
@@ -67,71 +77,163 @@ export function DashboardLayout({
   const isManager = role === "manager";
   const isEmployee = role === "employee" || (!isOwner && !isManager);
 
-  // Dynamic Navigation Items based on verified role
-  const navItems = [
+  // Dynamic Navigation Sections based on verified role
+  const navSections = [
     {
-      label: "Overview",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-      active: pathname === "/dashboard",
-      visible: true,
+      title: "Control Center",
+      items: [
+        {
+          label: "Executive Overview",
+          href: "/dashboard",
+          icon: LayoutDashboard,
+          active: pathname === "/dashboard",
+          visible: true,
+        },
+        {
+          label: "Stores / Branches",
+          href: "/dashboard/stores",
+          icon: Store,
+          active: pathname.startsWith("/dashboard/stores"),
+          visible: isOwner || isManager,
+        },
+      ].filter((item) => item.visible),
     },
     {
-      label: "Stores / Branches",
-      href: "/dashboard/stores",
-      icon: Store,
-      active: pathname.startsWith("/dashboard/stores"),
-      visible: isOwner || isManager,
+      title: "Billing & Sales (POS)",
+      items: [
+        {
+          label: "Billing Counter (POS)",
+          href: "/dashboard/billing",
+          icon: ShoppingCart,
+          active: pathname === "/dashboard/billing",
+          visible: true,
+        },
+        {
+          label: "Invoices & Receipts",
+          href: "/dashboard/invoices",
+          icon: Receipt,
+          active: pathname.startsWith("/dashboard/invoices"),
+          visible: true,
+        },
+      ].filter((item) => item.visible),
     },
     {
-      label: "Product Catalog",
-      href: "/dashboard/products",
-      icon: Package,
-      active: pathname.startsWith("/dashboard/products"),
-      visible: true,
+      title: "Inventory Workspace",
+      items: [
+        {
+          label: "Inventory Overview",
+          href: "/dashboard/inventory",
+          icon: Building2,
+          active: pathname === "/dashboard/inventory",
+          visible: true,
+        },
+        {
+          label: "Find Medicines & Stock",
+          href: "/dashboard/products",
+          icon: Package,
+          active:
+            pathname.startsWith("/dashboard/products") ||
+            pathname.startsWith("/dashboard/batches"),
+          visible: true,
+        },
+        {
+          label: "Receive Deliveries",
+          href: "/dashboard/purchases",
+          icon: FileText,
+          active: pathname.startsWith("/dashboard/purchases"),
+          visible: true,
+        },
+        {
+          label: "Suppliers",
+          href: "/dashboard/suppliers",
+          icon: Truck,
+          active: pathname.startsWith("/dashboard/suppliers"),
+          visible: true,
+        },
+        {
+          label: "Stock Transfers",
+          href: "/dashboard/transfers",
+          icon: ArrowLeftRight,
+          active: pathname.startsWith("/dashboard/transfers"),
+          visible: true,
+        },
+        {
+          label: "Count & Verify Stock",
+          href: "/dashboard/counts",
+          icon: ClipboardList,
+          active: pathname.startsWith("/dashboard/counts"),
+          visible: true,
+        },
+        {
+          label: "Stock Corrections",
+          href: "/dashboard/adjustments",
+          icon: SlidersHorizontal,
+          active: pathname.startsWith("/dashboard/adjustments"),
+          visible: true,
+        },
+        {
+          label: "Medicine Safety",
+          href: "/dashboard/quarantine",
+          icon: ShieldAlert,
+          active:
+            pathname.startsWith("/dashboard/quarantine") ||
+            pathname.startsWith("/dashboard/recalls"),
+          visible: true,
+        },
+        {
+          label: "Stock History",
+          href: "/dashboard/ledger",
+          icon: History,
+          active: pathname.startsWith("/dashboard/ledger"),
+          visible: true,
+        },
+      ].filter((item) => item.visible),
     },
     {
-      label: "Team Management",
-      href: "/dashboard/team",
-      icon: Users,
-      active: pathname === "/dashboard/team",
-      visible: isOwner || isManager,
+      title: "Administration",
+      items: [
+        {
+          label: "Team Management",
+          href: "/dashboard/team",
+          icon: Users,
+          active: pathname === "/dashboard/team",
+          visible: isOwner || isManager,
+        },
+        {
+          label: "Roles & Permissions",
+          href: "/dashboard/roles",
+          icon: ShieldCheck,
+          active: pathname === "/dashboard/roles",
+          visible: isOwner,
+        },
+        {
+          label: "Organization Settings",
+          href: "/dashboard/settings",
+          icon: Settings,
+          active: pathname === "/dashboard/settings",
+          visible: isOwner,
+        },
+        {
+          label: "Audit Activity",
+          href: "/dashboard/audit",
+          icon: Bell,
+          active: pathname === "/dashboard/audit",
+          visible: isOwner,
+        },
+        {
+          label: "Profile & Security",
+          href: "/dashboard/profile",
+          icon: User,
+          active: pathname === "/dashboard/profile",
+          visible: true,
+        },
+      ].filter((item) => item.visible),
     },
-    {
-      label: "Roles & Permissions",
-      href: "/dashboard/roles",
-      icon: ShieldCheck,
-      active: pathname === "/dashboard/roles",
-      visible: isOwner,
-    },
-    {
-      label: "Organization Settings",
-      href: "/dashboard/settings",
-      icon: Settings,
-      active: pathname === "/dashboard/settings",
-      visible: isOwner,
-    },
-    {
-      label: "Audit Activity",
-      href: "/dashboard/audit",
-      icon: History,
-      active: pathname === "/dashboard/audit",
-      visible: isOwner,
-    },
-    {
-      label: "Profile & Security",
-      href: "/dashboard/profile",
-      icon: User,
-      active: pathname === "/dashboard/profile",
-      visible: true,
-    },
-  ].filter((item) => item.visible);
-
-  const futureModules = [
-    { label: "Point of Sale (POS)", icon: ShoppingCart },
-    { label: "Batch Inventory & FEFO", icon: Package },
-    { label: "Purchases & GRN", icon: FileText },
   ];
+
+  const allNavItems = navSections.flatMap((s) => s.items);
+
+  const futureModules: Array<{ label: string; icon: any }> = [];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
@@ -147,7 +249,35 @@ export function DashboardLayout({
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <Logo size="md" href="/dashboard" />
+            {/* Dynamic Organization Identity */}
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2.5 hover:opacity-90 transition-opacity select-none"
+              title={organization?.name || "Pharmacy Entity"}
+            >
+              {organization?.logo_url && !logoImageFailed ? (
+                <div className="w-8 h-8 rounded-xl border border-slate-200 bg-white p-0.5 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-2xs">
+                  <img
+                    src={organization.logo_url}
+                    alt={`${organization.name} Logo`}
+                    className="w-full h-full object-contain"
+                    onError={() => setLogoImageFailed(true)}
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 text-[#0F766E] flex items-center justify-center flex-shrink-0 shadow-2xs">
+                  <Building2 className="w-4 h-4" />
+                </div>
+              )}
+              <div className="flex flex-col text-left">
+                <span className="font-bold text-slate-900 text-sm leading-tight tracking-tight line-clamp-1 max-w-[180px] sm:max-w-[240px]">
+                  {organization?.name || "PharmaPro"}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
+                  Pharmacy Entity
+                </span>
+              </div>
+            </Link>
           </div>
 
           {/* Center / Store Selector */}
@@ -310,51 +440,56 @@ export function DashboardLayout({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full flex gap-6">
         {/* Desktop Sidebar Navigation */}
         <aside className="w-60 flex-shrink-0 hidden lg:flex flex-col justify-between">
-          <div className="space-y-6">
-            {/* Primary Nav */}
-            <div className="space-y-1">
-              <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                Management
-              </span>
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                      item.active
-                        ? "bg-[#0F766E] text-white shadow-2xs font-semibold"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${item.active ? "text-white" : "text-slate-400"}`} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
+          <div className="space-y-5">
+            {navSections.map((section) => (
+              <div key={section.title} className="space-y-1">
+                <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  {section.title}
+                </span>
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                        item.active
+                          ? "bg-[#0F766E] text-white shadow-2xs font-semibold"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      }`}
+                    >
+                      <Icon
+                        className={`w-3.5 h-3.5 ${
+                          item.active ? "text-white" : "text-slate-400"
+                        }`}
+                      />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
 
-            {/* Future Pharmacy Operational Modules (Clearly Flagged as Coming Soon) */}
+            {/* Future Pharmacy Operational Modules */}
             <div className="space-y-1 pt-2 border-t border-[#E2E8F0]">
-              <div className="px-3 flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Operations
-                </span>
-                <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                  Phase 5–7
-                </span>
+              <div className="px-3 flex items-center justify-between mb-1.5">
+                {/* <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Upcoming
+                </span> */}
+                {/* <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                  Phase 5
+                </span> */}
               </div>
               {futureModules.map((fm) => {
                 const Icon = fm.icon;
                 return (
                   <div
                     key={fm.label}
-                    className="flex items-center justify-between px-3 py-2 rounded-xl text-xs text-slate-400 cursor-not-allowed select-none opacity-80"
+                    className="flex items-center justify-between px-3 py-1.5 rounded-xl text-xs text-slate-400 cursor-not-allowed select-none opacity-80"
                     title="Operational workflow will be activated in subsequent release."
                   >
                     <div className="flex items-center gap-2.5">
-                      <Icon className="w-4 h-4 text-slate-300" />
+                      <Icon className="w-3.5 h-3.5 text-slate-300" />
                       <span>{fm.label}</span>
                     </div>
                     <Lock className="w-3 h-3 text-slate-300" />
@@ -368,7 +503,7 @@ export function DashboardLayout({
           <div className="pt-4 border-t border-[#E2E8F0] space-y-2">
             <div className="p-3 bg-teal-50/60 rounded-xl border border-teal-100 text-xs">
               <span className="font-semibold text-slate-800 block text-[11px]">
-                {user.organizations?.[0]?.name || "DiracPharma"}
+                {user.organizations?.[0]?.name || "PharmaPro"}
               </span>
               <span className="text-[10px] text-teal-700 font-mono">
                 {stores.length} Registered {stores.length === 1 ? "Branch" : "Branches"}
@@ -384,10 +519,28 @@ export function DashboardLayout({
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="relative bg-white w-72 max-w-[80%] h-full p-5 flex flex-col justify-between shadow-xl z-10">
+            <div className="relative bg-white w-72 max-w-[80%] h-full p-5 flex flex-col justify-between shadow-xl z-10 overflow-y-auto">
               <div className="space-y-5">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <Logo size="sm" />
+                  <div className="flex items-center gap-2">
+                    {organization?.logo_url && !logoImageFailed ? (
+                      <div className="w-7 h-7 rounded-lg border border-slate-200 bg-white p-0.5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img
+                          src={organization.logo_url}
+                          alt={`${organization.name} Logo`}
+                          className="w-full h-full object-contain"
+                          onError={() => setLogoImageFailed(true)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded-lg bg-teal-50 border border-teal-200 text-[#0F766E] flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                    <span className="font-bold text-xs text-slate-900 line-clamp-1 max-w-[150px]">
+                      {organization?.name || "PharmaPro"}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setMobileMenuOpen(false)}
@@ -398,25 +551,32 @@ export function DashboardLayout({
                 </div>
 
                 {/* Mobile Navigation Links */}
-                <div className="space-y-1">
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium ${
-                          item.active
-                            ? "bg-[#0F766E] text-white font-semibold"
-                            : "text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  })}
+                <div className="space-y-4">
+                  {navSections.map((sec) => (
+                    <div key={sec.title} className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 block">
+                        {sec.title}
+                      </span>
+                      {sec.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium ${
+                              item.active
+                                ? "bg-[#0F766E] text-white font-semibold"
+                                : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -456,6 +616,11 @@ export function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Unobtrusive Platform Attribution Footer */}
+      {/* <footer className="mt-auto border-t border-slate-200/80 bg-white/60 py-3 px-4 sm:px-6 text-center text-[11px] text-slate-400">
+        PharmaPro Enterprise Pharmacy Management System &bull; Powered by DiracAI Services
+      </footer> */}
     </div>
   );
 }

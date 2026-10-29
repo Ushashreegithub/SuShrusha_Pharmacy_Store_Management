@@ -9,12 +9,16 @@ from apps.organizations.views import (
     OrganizationTeamView,
     TeamMemberDetailView,
     OrganizationSettingsView,
+    OrganizationBrandingView,
+    OrganizationLogoView,
 )
 
 urlpatterns = [
     path("overview/", OrganizationOverviewView.as_view(), name="org-overview"),
     path("team/", OrganizationTeamView.as_view(), name="org-team"),
     path("team/<uuid:user_id>/", TeamMemberDetailView.as_view(), name="org-team-member-detail"),
+    path("branding/", OrganizationBrandingView.as_view(), name="org-branding"),
+    path("logo/", OrganizationLogoView.as_view(), name="org-logo"),
     path("settings/", OrganizationSettingsView.as_view(), name="org-settings"),
     path("stores/", StoreListView.as_view(), name="store-list-create"),
     path("stores/<uuid:store_id>/", StoreDetailView.as_view(), name="store-detail-update"),

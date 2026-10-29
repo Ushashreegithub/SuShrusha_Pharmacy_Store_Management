@@ -119,6 +119,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         memberships = OrganizationMembership.objects.filter(
             user=user, is_active=True
         ).select_related("organization")
+        request = self.context.get("request")
         return [
             {
                 "id": str(m.organization.id),
@@ -126,6 +127,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 "slug": m.organization.slug,
                 "role": m.role,
                 "is_owner": m.role == "owner",
+                "logo_url": (
+                    request.build_absolute_uri(m.organization.logo.url)
+                    if m.organization.logo and request
+                    else m.organization.logo.url
+                    if m.organization.logo
+                    else None
+                ),
             }
             for m in memberships
         ]
@@ -134,6 +142,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         memberships = StoreMembership.objects.filter(
             user=user
         ).select_related("store", "store__organization")
+        request = self.context.get("request")
         return [
             {
                 "id": str(m.store.id),
@@ -144,6 +153,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 "is_active": m.is_active,
                 "organization_id": str(m.store.organization_id),
                 "organization_name": m.store.organization.name,
+                "organization_logo_url": (
+                    request.build_absolute_uri(m.store.organization.logo.url)
+                    if m.store.organization.logo and request
+                    else m.store.organization.logo.url
+                    if m.store.organization.logo
+                    else None
+                ),
             }
             for m in memberships
         ]
