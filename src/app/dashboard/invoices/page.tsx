@@ -30,6 +30,7 @@ import {
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
 import { Invoice, getInvoicesApi, getInvoiceDetailApi } from "@/lib/api";
+import { InvoicePrintDocument, formatINR } from "@/components/invoice/InvoicePrintDocument";
 
 function InvoicesManagementScreen() {
   const { activeStore, activeStoreId, organization } = useDashboard();
@@ -258,10 +259,12 @@ function InvoicesManagementScreen() {
                       <div className="text-[11px] text-slate-500 font-mono">{inv.customer_phone}</div>
                     </td>
                     <td className="py-3 px-4 text-slate-600">{inv.cashier_name}</td>
-                    <td className="py-3 px-4 text-slate-600 font-semibold">{inv.items.length} lines</td>
-                    <td className="py-3 px-4 text-right font-mono text-slate-600">₹{inv.subtotal_gross}</td>
+                    <td className="py-3 px-4 text-slate-600 font-semibold">{inv.items ? inv.items.length : 0} lines</td>
+                    <td className="py-3 px-4 text-right font-mono text-slate-700">
+                      {formatINR(inv.subtotal_gross || inv.gross_total)}
+                    </td>
                     <td className="py-3 px-4 text-right font-mono font-bold text-[#0F766E]">
-                      ₹{inv.net_total}
+                      {formatINR(inv.net_total)}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span
@@ -277,14 +280,27 @@ function InvoicesManagementScreen() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDetail(inv.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>View / Print</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetail(inv.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
+                          title="View Digital Invoice"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View</span>
+                        </button>
+                        <a
+                          href={`/dashboard/invoices/${inv.id}/print`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-semibold transition"
+                          title="Open Standalone Print / PDF"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Print</span>
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -325,247 +341,15 @@ function InvoicesManagementScreen() {
 
       {/* ================= DIGITAL INVOICE / PRINTABLE RECEIPT MODAL ================= */}
       {selectedInvoice && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl my-8 overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Controls Bar (Hidden during print) */}
-            <div className="bg-slate-900 text-white p-4 flex items-center justify-between print:hidden">
-              <div className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-emerald-400" />
-                <span className="font-bold text-sm">Tax Invoice: {selectedInvoice.invoice_number}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-2xs transition"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print Receipt</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedInvoice(null)}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Printable Digital Invoice Content */}
-            <div ref={receiptPrintRef} className="p-8 text-slate-800 space-y-6 text-xs bg-white">
-              {/* Header: Organization Identity & Store Credentials */}
-              <div className="flex justify-between items-start border-b border-slate-200 pb-5">
-                <div>
-                  <h1 className="text-xl font-extrabold text-slate-900 uppercase tracking-tight">
-                    {organization?.name || selectedInvoice.store_name}
-                  </h1>
-                  <p className="text-xs font-semibold text-[#0F766E] mt-0.5">
-                    {selectedInvoice.store_name} ({selectedInvoice.store_code})
-                  </p>
-                  <div className="text-[11px] text-slate-500 mt-1 space-y-0.5">
-                    {selectedInvoice.store_address && <div>{selectedInvoice.store_address}</div>}
-                    {selectedInvoice.store_phone && <div>Phone: {selectedInvoice.store_phone}</div>}
-                    {selectedInvoice.store_gstin && <div>GSTIN: {selectedInvoice.store_gstin}</div>}
-                    {selectedInvoice.store_dl_number && (
-                      <div>D.L. No: {selectedInvoice.store_dl_number}</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="inline-block bg-teal-50 text-[#0F766E] font-bold px-3 py-1 rounded-lg text-xs uppercase tracking-wider mb-2">
-                    Retail Tax Invoice / Cash Memo
-                  </span>
-                  <div className="text-sm font-bold font-mono text-slate-900">
-                    #{selectedInvoice.invoice_number}
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5 font-mono">
-                    Date:{" "}
-                    {new Date(selectedInvoice.created_at).toLocaleString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    Cashier: {selectedInvoice.cashier_name}
-                  </div>
-                </div>
-              </div>
-
-              {/* Customer & Prescription Details */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-                <div>
-                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block mb-1">
-                    Customer Information
-                  </span>
-                  <div className="font-bold text-slate-900">{selectedInvoice.customer_name}</div>
-                  <div className="text-slate-600 font-mono mt-0.5">
-                    Phone: {selectedInvoice.customer_phone}
-                  </div>
-                </div>
-
-                {selectedInvoice.has_prescription_items && (
-                  <div>
-                    <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block mb-1">
-                      Prescription Dispensing Record
-                    </span>
-                    <div className="text-slate-800">
-                      Doctor: <span className="font-semibold">{selectedInvoice.rx_doctor_name || "—"}</span>
-                    </div>
-                    <div className="text-slate-800 font-mono">
-                      Rx No: {selectedInvoice.rx_number || "—"}
-                    </div>
-                    {selectedInvoice.is_prescription_verified && (
-                      <div className="text-emerald-700 font-semibold text-[11px] mt-0.5 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Dispensed under Pharmacist Supervision</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Itemized Medicine Table */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
-                    <tr>
-                      <th className="py-2.5 px-3">#</th>
-                      <th className="py-2.5 px-3">Medicine Description</th>
-                      <th className="py-2.5 px-3">HSN</th>
-                      <th className="py-2.5 px-3">Batch / Expiry</th>
-                      <th className="py-2.5 px-3 text-center">Unit & Qty</th>
-                      <th className="py-2.5 px-3 text-right">MRP</th>
-                      <th className="py-2.5 px-3 text-right">Taxable</th>
-                      <th className="py-2.5 px-3 text-right">GST %</th>
-                      <th className="py-2.5 px-3 text-right">Total (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {selectedInvoice.items.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-slate-50/50">
-                        <td className="py-2 px-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
-                        <td className="py-2 px-3">
-                          <div className="font-bold text-slate-900">{item.product_name}</div>
-                          <div className="text-[10px] text-slate-500 font-mono">SKU: {item.product_sku}</div>
-                        </td>
-                        <td className="py-2 px-3 font-mono text-[11px] text-slate-600">
-                          {item.hsn_code || "3004"}
-                        </td>
-                        <td className="py-2 px-3">
-                          {item.batch_allocations && item.batch_allocations.length > 0 ? (
-                            item.batch_allocations.map((ba, bi) => (
-                              <div key={bi} className="font-mono text-[11px] text-slate-700">
-                                {ba.batch_number} <span className="text-slate-400">({ba.expiry_date})</span>
-                              </div>
-                            ))
-                          ) : (
-                            <span className="text-slate-400 font-mono">—</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-center font-semibold text-slate-700">
-                          {item.quantity} {item.unit_name}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">₹{item.unit_mrp}</td>
-                        <td className="py-2 px-3 text-right font-mono">₹{item.taxable_amount}</td>
-                        <td className="py-2 px-3 text-right font-mono text-slate-600">{item.tax_rate}%</td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                          ₹{item.line_net}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Financial Totals & Payment Summary */}
-              <div className="grid grid-cols-2 gap-6 pt-2">
-                {/* Payments Section */}
-                <div className="space-y-2">
-                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">
-                    Payment Tender Breakdown
-                  </span>
-                  <div className="space-y-1.5 border border-slate-200 rounded-xl p-3 bg-slate-50 text-xs">
-                    {selectedInvoice.payments.map((p, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-slate-700">
-                        <span className="font-semibold flex items-center gap-1.5">
-                          {p.payment_method === "CASH" ? (
-                            <Banknote className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : p.payment_method === "UPI" ? (
-                            <QrCode className="w-3.5 h-3.5 text-indigo-600" />
-                          ) : (
-                            <CreditCard className="w-3.5 h-3.5 text-blue-600" />
-                          )}
-                          <span>{p.payment_method}</span>
-                          {p.reference_number && (
-                            <span className="font-mono text-[10px] text-slate-400">
-                              ({p.reference_number})
-                            </span>
-                          )}
-                        </span>
-                        <span className="font-mono font-bold">₹{p.amount}</span>
-                      </div>
-                    ))}
-                    {parseFloat(selectedInvoice.change_returned) > 0 && (
-                      <div className="flex justify-between items-center text-emerald-700 font-semibold pt-1 border-t border-slate-200">
-                        <span>Change Returned:</span>
-                        <span className="font-mono">₹{selectedInvoice.change_returned}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Calculation Summary */}
-                <div className="space-y-1.5 text-xs text-slate-600 border border-slate-200 rounded-xl p-4 bg-slate-50">
-                  <div className="flex justify-between">
-                    <span>Subtotal Gross (MRP):</span>
-                    <span className="font-mono text-slate-800">₹{selectedInvoice.subtotal_gross}</span>
-                  </div>
-                  {parseFloat(selectedInvoice.total_discount) > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-semibold">
-                      <span>Total Discount:</span>
-                      <span className="font-mono">-₹{selectedInvoice.total_discount}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span>Taxable Amount:</span>
-                    <span className="font-mono">₹{selectedInvoice.taxable_subtotal}</span>
-                  </div>
-                  <div className="flex justify-between text-[11px] text-slate-500">
-                    <span>CGST:</span>
-                    <span className="font-mono">₹{selectedInvoice.cgst_total}</span>
-                  </div>
-                  <div className="flex justify-between text-[11px] text-slate-500">
-                    <span>SGST:</span>
-                    <span className="font-mono">₹{selectedInvoice.sgst_total}</span>
-                  </div>
-                  {parseFloat(selectedInvoice.round_off_amount) !== 0 && (
-                    <div className="flex justify-between text-[11px]">
-                      <span>Round-Off:</span>
-                      <span className="font-mono">₹{selectedInvoice.round_off_amount}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-slate-200">
-                    <span>Net Amount Paid:</span>
-                    <span className="font-mono text-[#0F766E] text-base">₹{selectedInvoice.net_total}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Statutory Legal Footer */}
-              <div className="text-[10px] text-slate-400 border-t border-slate-200 pt-4 text-center space-y-1">
-                <p>
-                  * Medicines once sold cannot be returned without original cash memo. Schedule drugs sold as per Drug & Cosmetics Rules.
-                </p>
-                <p className="font-semibold text-slate-500">
-                  Thank you for visiting {organization?.name || selectedInvoice.store_name}. Get well soon!
-                </p>
-              </div>
-            </div>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static">
+          <div className="max-w-4xl w-full my-8 print:my-0">
+            <InvoicePrintDocument
+              invoice={selectedInvoice}
+              organization={organization}
+              showActions={true}
+              onPrint={() => window.print()}
+              onClose={() => setSelectedInvoice(null)}
+            />
           </div>
         </div>
       )}

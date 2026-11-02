@@ -65,6 +65,7 @@ urlpatterns = [
     path("stores/<uuid:store_id>/checkout/", CheckoutView.as_view(), name="billing-checkout"),
 
     # Completed invoices
+    path("invoices/<uuid:invoice_id>/", InvoiceDetailView.as_view(), name="billing-invoice-detail-direct"),
     path("stores/<uuid:store_id>/invoices/", InvoiceListView.as_view(), name="billing-invoice-list"),
     path("stores/<uuid:store_id>/invoices/<uuid:invoice_id>/", InvoiceDetailView.as_view(), name="billing-invoice-detail"),
 ]

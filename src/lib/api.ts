@@ -1750,10 +1750,20 @@ export interface SaleDraftItem {
   product_name: string;
   product_sku: string;
   barcode?: string;
+  brand_name?: string;
+  generic_name?: string;
+  strength?: string;
+  dosage_form?: string;
+  base_unit?: string;
+  sale_unit?: string;
+  is_loose_dispensing_allowed?: boolean;
+  is_prescription_required?: boolean;
   prescription_class: string;
-  unit_type: "SALE_UNIT" | "LOOSE_UNIT";
+  unit_type: "SALE_UNIT" | "LOOSE_UNIT" | "BASE_UNIT";
   unit_name: string;
   quantity: number;
+  conversion_factor?: number;
+  total_base_units?: number;
   equivalent_base_units: number;
   unit_mrp: string;
   line_gross: string;
@@ -1764,7 +1774,7 @@ export interface SaleDraftItem {
   cgst_amount: string;
   sgst_amount: string;
   line_net: string;
-  fefo_preview: Array<{ batch_number: string; expiry_date: string; quantity_base_units: number }>;
+  fefo_preview?: Array<{ batch_number: string; expiry_date: string; quantity_base_units: number }>;
   created_at: string;
 }
 
@@ -1863,65 +1873,113 @@ export interface InvoicePayment {
   id: string;
   payment_method: "CASH" | "UPI" | "CARD";
   amount: string;
-  reference_number: string;
+  reference_number?: string;
   status: string;
+  cash_tendered?: string | null;
+  change_due?: string | null;
   created_at: string;
 }
 
 export interface InvoiceItem {
   id: string;
-  product_id: string;
+  product_id?: string;
   product_name: string;
   product_sku: string;
+  sku?: string;
+  barcode?: string;
+  brand_name?: string;
+  generic_name?: string;
+  dosage_form?: string;
+  strength?: string;
+  pack_description?: string;
   hsn_code: string;
   prescription_class: string;
+  is_prescription_required?: boolean;
   unit_type: "SALE_UNIT" | "LOOSE_UNIT";
   unit_name: string;
   quantity: number;
+  conversion_factor?: number;
+  total_base_units?: number;
   equivalent_base_units: number;
+  mrp?: string;
+  unit_price?: string;
   unit_mrp: string;
   line_gross: string;
+  discount_percent?: string;
   discount_amount: string;
+  taxable_value?: string;
   taxable_amount: string;
   tax_rate: string;
   cgst_amount: string;
   sgst_amount: string;
+  igst_amount?: string;
+  line_total?: string;
   line_net: string;
-  batch_allocations: Array<{ batch_number: string; expiry_date: string; quantity_base_units: number }>;
+  batch_allocations: Array<{
+    id?: string;
+    batch_number: string;
+    expiry_date: string;
+    quantity_base_units: number;
+    unit_cost?: string;
+    total_cost?: string;
+  }>;
 }
 
 export interface Invoice {
   id: string;
   invoice_number: string;
+  status?: string;
   store: string;
+  store_id?: string;
   store_name: string;
   store_code: string;
   store_address: string;
   store_phone: string;
+  store_email?: string;
   store_gstin: string;
   store_dl_number: string;
+  organization_name?: string;
+  organization_logo_url?: string | null;
   customer_name: string;
   customer_phone: string;
+  customer_address?: string;
   cashier_name: string;
   subtotal_gross: string;
+  gross_total?: string;
   total_discount: string;
+  discount_total?: string;
   taxable_subtotal: string;
+  taxable_amount?: string;
   cgst_total: string;
+  cgst_amount?: string;
   sgst_total: string;
+  sgst_amount?: string;
+  igst_total?: string;
+  igst_amount?: string;
+  total_tax?: string;
   round_off_amount: string;
+  rounding_adjustment?: string;
   net_total: string;
   paid_amount: string;
   change_returned: string;
+  change_due?: string;
   payment_status: "PAID" | "PARTIAL" | "UNPAID";
   has_prescription_items: boolean;
+  prescription_number?: string;
   rx_number: string;
+  doctor_name?: string;
   rx_doctor_name: string;
   is_prescription_verified: boolean;
+  pharmacist_name?: string;
   verified_by_pharmacist_name: string;
-  notes: string;
+  pharmacist_authorized_at?: string;
+  discount_reason?: string;
+  notes?: string;
+  invoice_date?: string;
   items: InvoiceItem[];
   payments: InvoicePayment[];
   created_at: string;
+  updated_at?: string;
 }
 
 // API functions
@@ -1969,7 +2027,7 @@ export async function getHeldSaleDraftsApi(storeId: string): Promise<SaleDraft[]
 export async function addSaleDraftItemApi(
   storeId: string,
   draftId: string,
-  payload: { product_id: string; quantity: number; unit_type?: "SALE_UNIT" | "LOOSE_UNIT" }
+  payload: { product_id: string; quantity: number; unit_type?: "SALE_UNIT" | "LOOSE_UNIT" | "BASE_UNIT" }
 ): Promise<SaleDraft> {
   return apiFetch<SaleDraft>(`/billing/stores/${storeId}/drafts/${draftId}/items/`, {
     method: "POST",
@@ -2106,8 +2164,13 @@ export async function getInvoicesApi(
   return apiFetch<PaginatedResponse<Invoice>>(`/billing/stores/${storeId}/invoices/${qStr}`);
 }
 
-export async function getInvoiceDetailApi(storeId: string, invoiceId: string): Promise<Invoice> {
-  return apiFetch<Invoice>(`/billing/stores/${storeId}/invoices/${invoiceId}/`);
+export async function getInvoiceDetailApi(storeId?: string | null, invoiceId?: string): Promise<Invoice> {
+  const targetId = invoiceId || storeId;
+  const targetStoreId = invoiceId ? storeId : null;
+  const endpoint = targetStoreId && targetStoreId !== "any"
+    ? `/billing/stores/${targetStoreId}/invoices/${targetId}/`
+    : `/billing/invoices/${targetId}/`;
+  return apiFetch<Invoice>(endpoint);
 }
 
 // Phase 2 Two-Stage Durable Checkout Lifecycle APIs

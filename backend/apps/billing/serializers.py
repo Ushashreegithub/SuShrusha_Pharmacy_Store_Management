@@ -544,17 +544,28 @@ class InvoiceItemBatchAllocationSerializer(serializers.ModelSerializer):
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
     batch_allocations = InvoiceItemBatchAllocationSerializer(many=True, read_only=True)
+    product_id = serializers.UUIDField(source="product.id", read_only=True)
+    product_sku = serializers.CharField(source="sku", read_only=True)
+    unit_name = serializers.SerializerMethodField()
+    unit_mrp = serializers.SerializerMethodField()
+    line_gross = serializers.SerializerMethodField()
+    taxable_amount = serializers.DecimalField(source="taxable_value", max_digits=12, decimal_places=2, read_only=True)
+    line_net = serializers.DecimalField(source="line_total", max_digits=12, decimal_places=2, read_only=True)
+    equivalent_base_units = serializers.IntegerField(source="total_base_units", read_only=True)
 
     class Meta:
         model = InvoiceItem
         fields = [
             "id",
+            "product",
+            "product_id",
             "product_name",
             "brand_name",
             "generic_name",
             "strength",
             "dosage_form",
             "sku",
+            "product_sku",
             "barcode",
             "hsn_code",
             "base_unit",
@@ -564,34 +575,72 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
             "prescription_class",
             "is_prescription_required",
             "unit_type",
+            "unit_name",
             "quantity",
             "total_base_units",
+            "equivalent_base_units",
             "mrp",
             "unit_price",
+            "unit_mrp",
+            "line_gross",
             "discount_percent",
             "discount_amount",
             "tax_rate",
             "taxable_value",
+            "taxable_amount",
             "cgst_amount",
             "sgst_amount",
             "igst_amount",
             "line_total",
+            "line_net",
             "batch_allocations",
         ]
+
+    def get_unit_name(self, obj):
+        if obj.unit_type in ["BASE_UNIT", "LOOSE_UNIT"]:
+            return obj.base_unit or "unit"
+        return obj.sale_unit or "pack"
+
+    def get_unit_mrp(self, obj):
+        price = obj.unit_price if obj.unit_price is not None else obj.mrp
+        return f"{price:.2f}"
+
+    def get_line_gross(self, obj):
+        price = obj.unit_price if obj.unit_price is not None else obj.mrp
+        qty = Decimal(str(obj.quantity))
+        return f"{(qty * price):.2f}"
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
+    store = serializers.UUIDField(source="store.id", read_only=True)
+    store_id = serializers.UUIDField(source="store.id", read_only=True)
     cashier_name = serializers.CharField(source="cashier.full_name", read_only=True)
     pharmacist_name = serializers.CharField(source="pharmacist_user.full_name", read_only=True)
+    verified_by_pharmacist_name = serializers.CharField(source="pharmacist_user.full_name", read_only=True)
     store_name = serializers.CharField(source="store.name", read_only=True)
     store_code = serializers.CharField(source="store.code", read_only=True)
     store_address = serializers.CharField(source="store.address", read_only=True)
     store_phone = serializers.CharField(source="store.phone", read_only=True)
     store_email = serializers.CharField(source="store.email", read_only=True)
+    store_gstin = serializers.SerializerMethodField()
+    store_dl_number = serializers.SerializerMethodField()
     organization_name = serializers.CharField(source="organization.name", read_only=True)
     organization_logo_url = serializers.SerializerMethodField()
+
+    subtotal_gross = serializers.DecimalField(source="gross_total", max_digits=12, decimal_places=2, read_only=True)
+    total_discount = serializers.DecimalField(source="discount_total", max_digits=12, decimal_places=2, read_only=True)
+    taxable_subtotal = serializers.DecimalField(source="taxable_amount", max_digits=12, decimal_places=2, read_only=True)
+    cgst_total = serializers.DecimalField(source="cgst_amount", max_digits=12, decimal_places=2, read_only=True)
+    sgst_total = serializers.DecimalField(source="sgst_amount", max_digits=12, decimal_places=2, read_only=True)
+    igst_total = serializers.DecimalField(source="igst_amount", max_digits=12, decimal_places=2, read_only=True)
+    round_off_amount = serializers.DecimalField(source="rounding_adjustment", max_digits=12, decimal_places=2, read_only=True)
+    change_due = serializers.DecimalField(source="change_returned", max_digits=12, decimal_places=2, read_only=True)
+    rx_number = serializers.CharField(source="prescription_number", read_only=True)
+    rx_doctor_name = serializers.CharField(source="doctor_name", read_only=True)
+    has_prescription_items = serializers.SerializerMethodField()
+    is_prescription_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -600,11 +649,15 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "invoice_number",
             "status",
             "payment_status",
+            "store",
+            "store_id",
             "store_name",
             "store_code",
             "store_address",
             "store_phone",
             "store_email",
+            "store_gstin",
+            "store_dl_number",
             "organization_name",
             "organization_logo_url",
             "cashier_name",
@@ -612,25 +665,39 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "customer_phone",
             "customer_address",
             "gross_total",
+            "subtotal_gross",
             "discount_total",
+            "total_discount",
             "taxable_amount",
+            "taxable_subtotal",
             "cgst_amount",
+            "cgst_total",
             "sgst_amount",
+            "sgst_total",
             "igst_amount",
+            "igst_total",
             "total_tax",
             "rounding_adjustment",
+            "round_off_amount",
             "net_total",
             "paid_amount",
             "change_returned",
+            "change_due",
             "prescription_number",
+            "rx_number",
             "doctor_name",
+            "rx_doctor_name",
             "pharmacist_name",
+            "verified_by_pharmacist_name",
             "pharmacist_authorized_at",
+            "has_prescription_items",
+            "is_prescription_verified",
             "discount_reason",
             "invoice_date",
             "items",
             "payments",
             "created_at",
+            "updated_at",
         ]
 
     def get_organization_logo_url(self, obj):
@@ -640,4 +707,24 @@ class InvoiceSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.organization.logo.url)
             return obj.organization.logo.url
         return None
+
+    def get_store_gstin(self, obj):
+        return (
+            getattr(obj.store, "gstin", None)
+            or getattr(obj.organization, "gstin", None)
+            or ""
+        )
+
+    def get_store_dl_number(self, obj):
+        return (
+            getattr(obj.store, "drug_license_number", None)
+            or getattr(obj.organization, "drug_license_number", None)
+            or ""
+        )
+
+    def get_has_prescription_items(self, obj):
+        return any(item.is_prescription_required for item in obj.items.all())
+
+    def get_is_prescription_verified(self, obj):
+        return bool(obj.pharmacist_authorized_at)
 

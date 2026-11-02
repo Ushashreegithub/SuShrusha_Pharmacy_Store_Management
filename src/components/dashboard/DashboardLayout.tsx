@@ -238,7 +238,7 @@ export function DashboardLayout({
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       {/* Top Application Bar */}
-      <header className="bg-white border-b border-[#E2E8F0] sticky top-0 z-30">
+      <header className="bg-white border-b border-[#E2E8F0] sticky top-0 z-30 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -439,7 +439,7 @@ export function DashboardLayout({
       {/* Main App Layout Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full flex gap-6">
         {/* Desktop Sidebar Navigation */}
-        <aside className="w-60 flex-shrink-0 hidden lg:flex flex-col justify-between">
+        <aside className="w-60 flex-shrink-0 hidden lg:flex flex-col justify-between print:hidden">
           <div className="space-y-5">
             {navSections.map((section) => (
               <div key={section.title} className="space-y-1">
@@ -596,9 +596,9 @@ export function DashboardLayout({
         )}
 
         {/* Workspace Content Body */}
-        <main className="flex-1 min-w-0 space-y-6">
+        <main className="flex-1 min-w-0 space-y-6 print:p-0 print:m-0">
           {(title || action) && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#E2E8F0]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#E2E8F0] print:hidden">
               <div>
                 {title && (
                   <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">

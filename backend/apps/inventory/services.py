@@ -2024,7 +2024,7 @@ class StockLedgerService:
             store=store,
             product_id=product_id,
             batch__is_recalled=False,
-            batch__expiry_date__gt=today
+            batch__expiry_date__gte=today
         ).exclude(
             batch__intake_status="quarantine_review"
         ).select_related(

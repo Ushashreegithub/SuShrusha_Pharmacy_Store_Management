@@ -392,10 +392,16 @@ class DraftBillingService:
         # Get latest batch MRP
         latest_batch = None
         if selected_batch_id:
-            latest_batch = Batch.objects.filter(id=selected_batch_id, organization=draft.organization).first()
+            try:
+                b_uuid = uuid.UUID(str(selected_batch_id).strip())
+                latest_batch = Batch.objects.filter(id=b_uuid, organization=draft.organization).first()
+            except (ValueError, TypeError, AttributeError):
+                latest_batch = None
         if not latest_batch and preview["allocated_batches"]:
             first_b_id = preview["allocated_batches"][0]["batch_id"]
             latest_batch = Batch.objects.filter(id=first_b_id).first()
+        if not latest_batch:
+            latest_batch = Batch.objects.filter(product=product).order_by("-expiry_date").first()
 
         mrp = latest_batch.mrp if latest_batch else Decimal("0.00")
         if unit_type == "BASE_UNIT":
@@ -727,9 +733,15 @@ class CheckoutService:
             if existing_attempt:
                 return existing_attempt
 
+            # Validate draft_id
+            try:
+                draft_uuid = uuid.UUID(str(draft_id).strip())
+            except (ValueError, TypeError, AttributeError):
+                raise ValidationError(f"Invalid draft ID format: '{draft_id}'.")
+
             # Lock draft
             draft = SaleDraft.objects.select_for_update().filter(
-                id=draft_id,
+                id=draft_uuid,
                 store=store
             ).first()
             if not draft:
@@ -862,9 +874,14 @@ class CheckoutService:
         - Cash is marked CONFIRMED immediately.
         - UPI/Card is initialized as REQUIRES_VERIFICATION.
         """
+        try:
+            attempt_uuid = uuid.UUID(str(attempt_id).strip())
+        except (ValueError, TypeError, AttributeError):
+            raise ValidationError(f"Invalid checkout attempt ID format: '{attempt_id}'.")
+
         with transaction.atomic():
             attempt = CheckoutAttempt.objects.select_for_update().filter(
-                id=attempt_id,
+                id=attempt_uuid,
                 store=store
             ).first()
             if not attempt:
@@ -946,12 +963,21 @@ class CheckoutService:
         if not (is_user_org_owner(verifier_user, store.organization) or is_user_assigned_store_manager(verifier_user, store)):
             raise ValidationError("Only organization owners and assigned store managers can verify external payments.")
 
+        try:
+            attempt_uuid = uuid.UUID(str(attempt_id).strip())
+        except (ValueError, TypeError, AttributeError):
+            raise ValidationError(f"Invalid checkout attempt ID format: '{attempt_id}'.")
+        try:
+            payment_uuid = uuid.UUID(str(payment_id).strip())
+        except (ValueError, TypeError, AttributeError):
+            raise ValidationError(f"Invalid payment ID format: '{payment_id}'.")
+
         with transaction.atomic():
-            attempt = CheckoutAttempt.objects.select_for_update().filter(id=attempt_id, store=store).first()
+            attempt = CheckoutAttempt.objects.select_for_update().filter(id=attempt_uuid, store=store).first()
             if not attempt:
                 raise ValidationError("Checkout attempt not found.")
 
-            payment = Payment.objects.select_for_update().filter(id=payment_id, checkout_attempt=attempt).first()
+            payment = Payment.objects.select_for_update().filter(id=payment_uuid, checkout_attempt=attempt).first()
             if not payment:
                 raise ValidationError("Payment record not found.")
 
@@ -1024,9 +1050,14 @@ class CheckoutService:
         - Creates Invoice, InvoiceItem, and InvoiceItemBatchAllocation records.
         - Commits atomically or rolls back completely.
         """
+        try:
+            attempt_uuid = uuid.UUID(str(attempt_id).strip())
+        except (ValueError, TypeError, AttributeError):
+            raise ValidationError(f"Invalid checkout attempt ID format: '{attempt_id}'.")
+
         with transaction.atomic():
             attempt = CheckoutAttempt.objects.select_for_update().filter(
-                id=attempt_id,
+                id=attempt_uuid,
                 store=store
             ).first()
             if not attempt:

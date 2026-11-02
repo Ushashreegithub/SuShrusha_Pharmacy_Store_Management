@@ -22,3 +22,87 @@ body {
   outline: 2px solid #0F766E;
   outline-offset: 2px;
 }
+
+/* ==========================================================================
+   PRINT / PDF GENERATION STYLES
+   Ensures standalone, unclipped, professional pharmacy invoices
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  /* Reset body and background for clean paper output */
+  html,
+  body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Universal hide for screen-only controls and dashboard shell */
+  header,
+  aside,
+  nav,
+  footer,
+  .print\:hidden,
+  .no-print,
+  button,
+  input,
+  select {
+    display: none !important;
+  }
+
+  /* Hide backdrop blur & background overlays */
+  .fixed.inset-0 {
+    position: static !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Prevent page-break cutting through critical invoice elements */
+  .avoid-break,
+  tr,
+  img,
+  table {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  /* When printing from within a page or modal that contains #invoice-printable-area */
+  body:has(#invoice-printable-area) * {
+    visibility: hidden;
+  }
+
+  body:has(#invoice-printable-area) #invoice-printable-area,
+  body:has(#invoice-printable-area) #invoice-printable-area * {
+    visibility: visible;
+  }
+
+  body:has(#invoice-printable-area) #invoice-printable-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+}

@@ -37,9 +37,11 @@ import {
   HelpCircle,
   Volume2,
   Zap,
+  Hash,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
+import { InvoicePrintDocument } from "@/components/invoice/InvoicePrintDocument";
 import {
   SaleDraft,
   SaleDraftItem,
@@ -98,8 +100,7 @@ function CashierPOSScreen() {
   const [testBarcodeQuery, setTestBarcodeQuery] = useState("");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const [scanQty, setScanQty] = useState<number>(1);
 
   // Customer Management
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
@@ -270,9 +271,17 @@ function CashierPOSScreen() {
 
   // Core Barcode & Search Item Resolver (Direct API call without debounce race conditions)
   const processBarcodeOrSearch = useCallback(
-    async (code: string) => {
-      const trimmed = code.trim();
+    async (code: string, customQty?: number) => {
+      let trimmed = code.trim();
       if (!trimmed || !draft || !storeId) return;
+
+      // Support multiplier syntax e.g. "3*890123" or "5 x 890123"
+      let qtyToAdd = customQty || scanQty || 1;
+      const multMatch = trimmed.match(/^(\d+)\s*[*xX]\s*(.+)$/);
+      if (multMatch) {
+        qtyToAdd = Math.max(1, parseInt(multMatch[1], 10) || 1);
+        trimmed = multMatch[2].trim();
+      }
 
       if (isSearchingRef.current) return;
       isSearchingRef.current = true;
@@ -308,15 +317,15 @@ function CashierPOSScreen() {
             0;
           if (avail <= 0) {
             playScannerBeep(false);
-            setActionError(`Cannot dispense "${matched.name}": Out of stock.`);
+            setActionError(`Cannot dispense "${matched.name}": Out of stock (0 available).`);
             return;
           }
 
-          // Check if item already exists in active draft cart; if so, increment quantity!
+          // Check if item already exists in active draft cart; if so, increment by qtyToAdd!
           const existing = draft.items?.find(
             (it) => it.product_id === matched.id || (it as any).product === matched.id
           );
-          const targetQty = existing ? existing.quantity + 1 : 1;
+          const targetQty = existing ? existing.quantity + qtyToAdd : qtyToAdd;
 
           // Add or update item in draft bill
           const updated = await addSaleDraftItemApi(storeId, draft.id, {
@@ -328,9 +337,10 @@ function CashierPOSScreen() {
           playScannerBeep(true);
           setSearchQuery("");
           setShowSearchResults(false);
+          setScanQty(1);
           searchInputRef.current?.focus();
           setActionSuccess(
-            `✓ Scanned & Added: ${matched.name} (Qty: ${targetQty})`
+            `✓ Added: ${matched.name} (+${qtyToAdd} ${matched.sale_unit || "pack"}s, Total: ${targetQty})`
           );
         } else if (results.length > 1) {
           setSearchResults(results);
@@ -349,7 +359,7 @@ function CashierPOSScreen() {
         isSearchingRef.current = false;
       }
     },
-    [draft, storeId, playScannerBeep]
+    [draft, storeId, scanQty, playScannerBeep]
   );
 
   // Barcode Wedge / Enter Key Handler inside the search input
@@ -388,99 +398,102 @@ function CashierPOSScreen() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  // Camera Video Stream Handler for Web/Mobile Barcode Scanning
+  // Camera Barcode Scanner using Html5Qrcode (Cross-browser, 1D & 2D code detection)
   useEffect(() => {
     if (!showCameraScanner) {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
       setIsCameraActive(false);
       setCameraError(null);
       return;
     }
 
+    let html5QrCode: any = null;
     let isCancelled = false;
 
-    async function initCamera() {
+    const timer = setTimeout(async () => {
       try {
         setCameraError(null);
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-        });
+        setIsCameraActive(false);
 
-        if (isCancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+        if (isCancelled) return;
 
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+        html5QrCode = new Html5Qrcode("html5qr-code-region");
+
+        const config = {
+          fps: 10,
+          qrbox: { width: 280, height: 160 },
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.QR_CODE,
+          ],
+        };
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText: string) => {
+            if (isCancelled) return;
+            playScannerBeep(true);
+            setShowCameraScanner(false);
+            processBarcodeOrSearch(decodedText, scanQty);
+          },
+          () => {
+            // Frame scanned without barcode; continue scanning
+          }
+        );
+
+        if (!isCancelled) {
           setIsCameraActive(true);
         }
-
-        // Check if BarcodeDetector is supported natively in the browser
-        if ("BarcodeDetector" in window) {
-          const barcodeDetector = new (window as any).BarcodeDetector({
-            formats: ["ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e", "qr_code"],
-          });
-
-          const detectFrame = async () => {
-            if (!videoRef.current || !streamRef.current || isCancelled) return;
-            try {
-              if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-                const barcodes = await barcodeDetector.detect(videoRef.current);
-                if (barcodes.length > 0 && barcodes[0].rawValue) {
-                  const scanned = barcodes[0].rawValue;
-                  setShowCameraScanner(false);
-                  await processBarcodeOrSearch(scanned);
-                  return;
-                }
-              }
-            } catch {
-              // Frame dropped or detection error; continue loop
-            }
-            if (!isCancelled) {
-              requestAnimationFrame(detectFrame);
-            }
-          };
-
-          requestAnimationFrame(detectFrame);
-        }
       } catch (err: any) {
-        console.error("Camera access error:", err);
-        setCameraError(
-          err.name === "NotAllowedError"
-            ? "Camera permission denied. Please allow camera access in browser settings to scan barcodes."
-            : "Could not start camera video stream. You can still scan using any handheld USB scanner or type the barcode."
-        );
-        setIsCameraActive(false);
+        if (!isCancelled) {
+          console.error("Camera barcode scanner error:", err);
+          setCameraError(
+            err?.message ||
+              "Could not start camera scanner. Please grant camera permissions or use the manual barcode input below."
+          );
+          setIsCameraActive(false);
+        }
       }
-    }
-
-    initCamera();
+    }, 150);
 
     return () => {
       isCancelled = true;
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
+      clearTimeout(timer);
+      if (html5QrCode) {
+        try {
+          if (html5QrCode.isScanning) {
+            html5QrCode.stop().catch(() => {}).then(() => {
+              try { html5QrCode.clear(); } catch {}
+            });
+          } else {
+            try { html5QrCode.clear(); } catch {}
+          }
+        } catch {}
       }
       setIsCameraActive(false);
     };
-  }, [showCameraScanner, processBarcodeOrSearch]);
+  }, [showCameraScanner, scanQty, processBarcodeOrSearch, playScannerBeep]);
 
   // Add Item to Draft (Increments quantity if already in cart)
-  const handleAddItemToDraft = async (product: POSProduct, unitType: "SALE_UNIT" | "LOOSE_UNIT") => {
+  const handleAddItemToDraft = async (
+    product: POSProduct,
+    unitType: "SALE_UNIT" | "LOOSE_UNIT",
+    quantityToAdd: number = 1
+  ) => {
     if (!draft || !storeId) return;
     try {
       setActionError(null);
       const existing = draft.items?.find(
         (it) => (it.product_id === product.id || (it as any).product === product.id) && it.unit_type === unitType
       );
-      const targetQty = existing ? existing.quantity + 1 : 1;
+      const qty = Math.max(1, quantityToAdd);
+      const targetQty = existing ? existing.quantity + qty : qty;
       const updated = await addSaleDraftItemApi(storeId, draft.id, {
         product_id: product.id,
         quantity: targetQty,
@@ -489,9 +502,10 @@ function CashierPOSScreen() {
       setDraft(updated);
       setShowSearchResults(false);
       setSearchQuery("");
+      setScanQty(1);
       searchInputRef.current?.focus();
       playScannerBeep(true);
-      setActionSuccess(`Added ${product.name} (Qty: ${targetQty}) to bill.`);
+      setActionSuccess(`Added ${qty} ${unitType === "SALE_UNIT" ? (product.sale_unit || "pack") : (product.base_unit || "unit")}(s) of ${product.name} to bill.`);
     } catch (err: any) {
       console.error("Failed to add item:", err);
       playScannerBeep(false);
@@ -503,7 +517,7 @@ function CashierPOSScreen() {
   const handleUpdateItemQuantity = async (
     item: SaleDraftItem,
     newQty: number,
-    unitType?: "SALE_UNIT" | "LOOSE_UNIT"
+    unitType?: "SALE_UNIT" | "LOOSE_UNIT" | "BASE_UNIT"
   ) => {
     if (!draft || !storeId) return;
     if (newQty <= 0) {
@@ -753,6 +767,14 @@ function CashierPOSScreen() {
     }
 
     try {
+      // Validate draft ID
+      if (!draft.id || draft.id === "undefined") {
+        setActionError("Active draft bill not found. Reloading counter draft...");
+        await loadActiveDraft();
+        setIsCheckingOut(false);
+        return;
+      }
+
       // If we already have a verified attempt ready to finalize, finalize directly!
       if (activeAttempt && activeAttempt.status === "READY_TO_FINALIZE") {
         const finRes = await finalizeCheckoutApi(storeId, activeAttempt.id, idempotencyKey);
@@ -772,8 +794,15 @@ function CashierPOSScreen() {
       }
 
       const payable = draft
-        ? parseFloat(draft.final_payable_amount || draft.totals?.final_payable || "0") || 0
+        ? Math.max(0, parseFloat(draft.final_payable_amount || draft.totals?.final_payable || draft.totals?.net_total || "0") || 0)
         : 0;
+
+      if (payable <= 0) {
+        setActionError("Bill payable amount must be greater than zero. Please add items with valid pricing before completing sale.");
+        setIsCheckingOut(false);
+        return;
+      }
+
       let paymentsPayload: any[] = [];
 
       if (paymentMethodTab === "CASH") {
@@ -823,8 +852,8 @@ function CashierPOSScreen() {
         let customerPhone = "9999999999";
 
         if (draft.customer) {
-          if (typeof draft.customer === "object") {
-            customerId = (draft.customer as any).id;
+          if (typeof draft.customer === "object" && (draft.customer as any).id) {
+            customerId = String((draft.customer as any).id).trim();
             customerName = (draft.customer as any).name || draft.customer_name || customerName;
             customerPhone = (draft.customer as any).phone_number || draft.customer_phone || customerPhone;
           } else if (typeof draft.customer === "string" && draft.customer.trim()) {
@@ -833,6 +862,11 @@ function CashierPOSScreen() {
         } else if (draft.customer_name) {
           customerName = draft.customer_name;
           customerPhone = draft.customer_phone || customerPhone;
+        }
+
+        // Ensure customerId is not a string literal 'undefined' or 'null'
+        if (customerId && (customerId === "undefined" || customerId === "null" || !customerId.includes("-"))) {
+          customerId = undefined;
         }
 
         currentAttempt = await initiateCheckoutApi(
@@ -936,7 +970,7 @@ function CashierPOSScreen() {
   };
 
   const finalPayable = draft
-    ? parseFloat(draft.final_payable_amount || draft.totals?.final_payable || "0") || 0
+    ? Math.max(0, parseFloat(draft.final_payable_amount || draft.totals?.final_payable || draft.totals?.net_total || "0") || 0)
     : 0;
   const cashChangeDue = Math.max(0, (parseFloat(cashTendered) || 0) - finalPayable);
 
@@ -1041,15 +1075,59 @@ function CashierPOSScreen() {
         {/* LEFT COLUMN: Medicine Search & Cart Items */}
         <div className="lg:col-span-8 flex flex-col border-r border-slate-200 bg-slate-50 overflow-hidden">
           {/* Barcode & Medicine Search Box */}
-          <div className="p-4 bg-white border-b border-slate-200 shadow-2xs relative">
+          <div className="p-3 bg-white border-b border-slate-200 shadow-2xs relative">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {/* Cashier Quantity Multiplier */}
+              <div className="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-2 py-1 gap-1.5 flex-shrink-0 shadow-2xs">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Qty:</span>
+                <button
+                  type="button"
+                  onClick={() => setScanQty((q) => Math.max(1, q - 1))}
+                  className="w-5 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs"
+                  title="Decrease scan quantity"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={scanQty}
+                  onChange={(e) => setScanQty(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-9 h-6 text-center font-bold text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => setScanQty((q) => q + 1)}
+                  className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 shadow-2xs"
+                  title="Increase scan quantity"
+                >
+                  +
+                </button>
+                {/* Quick Multiplier Chips */}
+                {[].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setScanQty(num)}
+                    className={`px-1 py-0.5 rounded-md text-[10px] font-bold transition ${
+                      scanQty === num
+                        ? "bg-[#0F766E] text-white"
+                        : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+
               <div className="relative flex-1">
                 <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   autoFocus
-                  placeholder="Scan barcode gun or type medicine brand, generic name, SKU (Press Enter to add)..."
+                  placeholder={`Scan barcode or type name / SKU (Qty: ${scanQty})...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleBarcodeOrDirectAdd}
@@ -1112,7 +1190,7 @@ function CashierPOSScreen() {
                     </>
                   ) : isSearchFocused ? (
                     <>
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-3 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                       <QrCode className="w-4 h-4 text-emerald-600" />
                       <span>Ready for Scan</span>
                       <HelpCircle
@@ -1120,13 +1198,13 @@ function CashierPOSScreen() {
                           e.stopPropagation();
                           setShowScannerGuide(true);
                         }}
-                        className="w-3.5 h-3.5 text-emerald-600 hover:scale-125 transition"
+                        className="w-3 h-3.5 text-emerald-600 hover:scale-125 transition"
                       />
                     </>
                   ) : (
                     <>
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                      <QrCode className="w-4 h-4 text-amber-600" />
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      <QrCode className="w-2 h-4 text-amber-600" />
                       <span>Click to Focus Scanner</span>
                     </>
                   )}
@@ -1148,8 +1226,12 @@ function CashierPOSScreen() {
                     0;
                   const hasStock = availBase > 0;
                   const isRx = p.prescription_class !== "otc";
-                  const displayMrp = p.display_mrp || (p as any).mrp || "0.00";
-                  const displayUnitMrp = p.display_unit_mrp || (p as any).unit_mrp || "0.00";
+                  const parsedMrp = parseFloat(p.display_mrp || (p as any).mrp || "0") || 0;
+                  const parsedUnitMrp =
+                    parseFloat(p.display_unit_mrp || (p as any).unit_mrp || "0") ||
+                    (p.conversion_factor ? parsedMrp / p.conversion_factor : parsedMrp);
+                  const displayMrp = parsedMrp > 0 ? parsedMrp.toFixed(2) : "0.00";
+                  const displayUnitMrp = parsedUnitMrp > 0 ? parsedUnitMrp.toFixed(2) : "0.00";
                   const availPacks =
                     p.available_stock_sale_units ??
                     (p as any).available_packs ??
@@ -1159,10 +1241,10 @@ function CashierPOSScreen() {
                     <div
                       key={p.id}
                       className={`p-3 transition flex items-center justify-between gap-4 ${
-                        hasStock ? "hover:bg-teal-50/60 cursor-pointer" : "opacity-60 bg-slate-50 cursor-not-allowed"
+                        hasStock ? "hover:bg-teal-50/60 cursor-pointer" : "opacity-75 bg-slate-50"
                       }`}
                       onClick={() => {
-                        if (hasStock) handleAddItemToDraft(p, "SALE_UNIT");
+                        if (hasStock) handleAddItemToDraft(p, "SALE_UNIT", scanQty);
                       }}
                     >
                       <div className="flex-1 min-w-0">
@@ -1211,7 +1293,7 @@ function CashierPOSScreen() {
                           >
                             {hasStock
                               ? `${availPacks} ${p.sale_unit || "pack"}s`
-                              : "Out of Stock"}
+                              : "Out of Stock (0)"}
                           </span>
                           {hasStock && (
                             <div className="text-[10px] text-slate-400 mt-0.5">
@@ -1221,28 +1303,29 @@ function CashierPOSScreen() {
                         </div>
 
                         {hasStock && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAddItemToDraft(p, "SALE_UNIT");
+                                handleAddItemToDraft(p, "SALE_UNIT", scanQty);
                               }}
-                              className="px-2 py-1 bg-[#0F766E] hover:bg-[#115E59] text-white text-xs font-semibold rounded-lg shadow-2xs"
+                              className="px-2.5 py-1 bg-[#0F766E] hover:bg-[#115E59] text-white text-xs font-semibold rounded-lg shadow-2xs"
+                              title={`Add ${scanQty} pack(s) of ${p.name}`}
                             >
-                              + Pack
+                              + Pack ({scanQty})
                             </button>
                             {p.is_loose_dispensing_allowed && (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAddItemToDraft(p, "LOOSE_UNIT");
+                                  handleAddItemToDraft(p, "LOOSE_UNIT", scanQty);
                                 }}
-                                className="px-2 py-1 bg-teal-100 hover:bg-teal-200 text-[#0F766E] text-xs font-semibold rounded-lg"
-                                title={`Dispense single ${p.base_unit}`}
+                                className="px-2.5 py-1 bg-teal-100 hover:bg-teal-200 text-[#0F766E] text-xs font-semibold rounded-lg"
+                                title={`Dispense ${scanQty} single ${p.base_unit}`}
                               >
-                                + Loose
+                                + Loose ({scanQty})
                               </button>
                             )}
                           </div>
@@ -1286,10 +1369,10 @@ function CashierPOSScreen() {
                 <div className="divide-y divide-slate-100">
                   {draft.items.map((item, idx) => {
                     const isRx = item.prescription_class !== "otc";
-                    const itemUnitMrp = item.unit_mrp || (item as any).unit_price || "0.00";
-                    const itemLineNet =
-                      item.line_net ||
-                      (parseFloat(itemUnitMrp) * item.quantity).toFixed(2);
+                    const rawMrp = parseFloat(item.unit_mrp || (item as any).unit_price || "0") || 0;
+                    const itemUnitMrp = rawMrp > 0 ? rawMrp.toFixed(2) : "0.00";
+                    const rawNet = parseFloat(item.line_net || "0") || (rawMrp * item.quantity);
+                    const itemLineNet = rawNet.toFixed(2);
 
                     return (
                       <div key={item.id} className="p-3.5 hover:bg-slate-50/50 transition">
@@ -1350,36 +1433,74 @@ function CashierPOSScreen() {
 
                           {/* Line Total & Interactive Quantity Stepper */}
                           <div className="flex items-center gap-3 text-right">
-                            <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden shadow-2xs">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateItemQuantity(item, item.quantity - 1)}
-                                className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition font-bold text-sm"
-                                title="Decrease quantity"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                min="1"
-                                max="999"
-                                value={item.quantity}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value);
-                                  if (!isNaN(val) && val > 0) {
-                                    handleUpdateItemQuantity(item, val);
-                                  }
-                                }}
-                                className="w-12 h-7 text-center font-bold text-xs bg-white border-x border-slate-200 text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-teal-500"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateItemQuantity(item, item.quantity + 1)}
-                                className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition font-bold text-sm"
-                                title="Increase quantity"
-                              >
-                                +
-                              </button>
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-1">
+                                <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden shadow-2xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateItemQuantity(item, item.quantity - 1)}
+                                    className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition font-bold text-sm"
+                                    title="Decrease quantity"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="999"
+                                    value={item.quantity}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value);
+                                      if (!isNaN(val) && val > 0) {
+                                        handleUpdateItemQuantity(item, val);
+                                      }
+                                    }}
+                                    className="w-12 h-7 text-center font-bold text-xs bg-white border-x border-slate-200 text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-teal-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateItemQuantity(item, item.quantity + 1)}
+                                    className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition font-bold text-sm"
+                                    title="Increase quantity"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                {/* Quick Increment Chips */}
+                                {[1, 5, 10].map((inc) => (
+                                  <button
+                                    key={inc}
+                                    type="button"
+                                    onClick={() => handleUpdateItemQuantity(item, item.quantity + inc)}
+                                    className="px-1.5 py-1 text-[10px] font-bold rounded bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-[#0F766E] border border-slate-200 shadow-2xs transition"
+                                    title={`Add ${inc} more`}
+                                  >
+                                    +{inc}
+                                  </button>
+                                ))}
+                              </div>
+                              {item.is_loose_dispensing_allowed && (
+                                <div className="flex items-center gap-1 text-[10px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateItemQuantity(item, item.quantity, "SALE_UNIT")}
+                                    className={`px-1.5 py-0.5 rounded font-bold transition ${
+                                      item.unit_type === "SALE_UNIT" ? "bg-[#0F766E] text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                    }`}
+                                  >
+                                    {item.sale_unit || "Pack"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateItemQuantity(item, item.quantity, "LOOSE_UNIT")}
+                                    className={`px-1.5 py-0.5 rounded font-bold transition ${
+                                      item.unit_type !== "SALE_UNIT" ? "bg-[#0F766E] text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                    }`}
+                                  >
+                                    {item.base_unit || "Loose"}
+                                  </button>
+                                </div>
+                              )}
                             </div>
 
                             <div className="min-w-[5.5rem] text-right">
@@ -1755,9 +1876,14 @@ function CashierPOSScreen() {
               {paymentMethodTab === "CASH" && (
                 <div className="space-y-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Cash Tendered by Customer (₹)
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-slate-700">
+                        Cash Tendered by Customer (₹)
+                      </label>
+                      <span className="text-[11px] text-slate-500 font-mono">
+                        Due: ₹{finalPayable.toFixed(2)}
+                      </span>
+                    </div>
                     <input
                       type="number"
                       step="0.01"
@@ -1766,6 +1892,32 @@ function CashierPOSScreen() {
                       onChange={(e) => setCashTendered(e.target.value)}
                       className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-lg font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F766E]"
                     />
+                  </div>
+
+                  {/* Quick Cash Tender Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Quick Tender:</span>
+                    <button
+                      type="button"
+                      onClick={() => setCashTendered(finalPayable.toFixed(2))}
+                      className="px-2 py-1 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition"
+                    >
+                      Exact (₹{finalPayable.toFixed(2)})
+                    </button>
+                    {[100, 200, 500, 1000].map((denomination) => (
+                      <button
+                        key={denomination}
+                        type="button"
+                        onClick={() => setCashTendered(denomination.toString())}
+                        className={`px-2 py-1 text-xs font-bold rounded-lg border transition ${
+                          parseFloat(cashTendered) === denomination
+                            ? "bg-[#0F766E] text-white border-[#0F766E]"
+                            : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        ₹{denomination}
+                      </button>
+                    ))}
                   </div>
 
                   <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200">
@@ -1970,149 +2122,40 @@ function CashierPOSScreen() {
         </div>
       )}
 
-      {/* 2. Success / Digital Receipt Modal (Print-Optimized) */}
+      {/* 2. Success / Digital Receipt Modal (Print-Optimized via InvoicePrintDocument) */}
       {showReceiptModal && completedInvoice && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div
-            id="printable-pharmacy-receipt"
-            className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col"
-          >
-            {/* Header Banner */}
-            <div className="bg-emerald-600 text-white p-5 text-center shrink-0">
-              <CheckCircle2 className="w-10 h-10 mx-auto mb-1.5" />
-              <h3 className="font-extrabold text-lg">Sale Completed Successfully!</h3>
-              <p className="text-xs opacity-90 font-mono mt-0.5">
-                Tax Invoice #{completedInvoice.invoice_number}
-              </p>
-            </div>
-
-            <div className="p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
-              {/* Store & Customer Details */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-slate-700">
-                <div className="flex justify-between items-center font-bold text-slate-900 text-sm">
-                  <span>{completedInvoice.store_name}</span>
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono font-semibold">
-                    PAID
-                  </span>
-                </div>
-                {completedInvoice.store_gstin && (
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-slate-500">GSTIN:</span>
-                    <span className="font-mono">{completedInvoice.store_gstin}</span>
-                  </div>
-                )}
-                {completedInvoice.store_dl_number && (
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-slate-500">Drug License:</span>
-                    <span className="font-mono">{completedInvoice.store_dl_number}</span>
-                  </div>
-                )}
-                <div className="border-t border-slate-200 pt-1.5 mt-1.5 flex justify-between">
-                  <span className="text-slate-500">Customer:</span>
-                  <span className="font-bold">{completedInvoice.customer_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Phone:</span>
-                  <span className="font-mono">{completedInvoice.customer_phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Cashier:</span>
-                  <span>{completedInvoice.cashier_name}</span>
-                </div>
-              </div>
-
-              {/* Itemized Medicine Lines */}
-              {completedInvoice.items && completedInvoice.items.length > 0 && (
-                <div className="border border-slate-200 rounded-xl p-3 space-y-2 bg-white">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between pb-1 border-b border-slate-100">
-                    <span>Medicine / Item</span>
-                    <span>Qty × MRP = Total</span>
-                  </div>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {completedInvoice.items.map((item: any) => (
-                      <div key={item.id} className="flex justify-between items-start text-[11px] text-slate-700">
-                        <div className="pr-2">
-                          <div className="font-semibold text-slate-800">{item.product_name}</div>
-                          <div className="text-[10px] text-slate-500 font-mono">
-                            {item.batch_allocations && item.batch_allocations.length > 0
-                              ? `Batch: ${item.batch_allocations.map((b: any) => b.batch_number).join(", ")}`
-                              : item.barcode ? `Barcode: ${item.barcode}` : ""}
-                          </div>
-                        </div>
-                        <div className="font-mono text-right shrink-0">
-                          <span className="text-slate-500 text-[10px]">{item.quantity} × ₹{item.mrp} = </span>
-                          <span className="font-bold text-slate-900">₹{item.line_total}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Financial & Tax Summary */}
-              <div className="space-y-1.5 text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <div className="flex justify-between text-slate-600">
-                  <span>Gross Total:</span>
-                  <span className="font-mono">₹{completedInvoice.subtotal_gross}</span>
-                </div>
-                {parseFloat(completedInvoice.total_discount || "0") > 0 && (
-                  <div className="flex justify-between text-amber-700 font-semibold">
-                    <span>Discount Applied:</span>
-                    <span className="font-mono">-₹{completedInvoice.total_discount}</span>
-                  </div>
-                )}
-                {(parseFloat(completedInvoice.cgst_total || "0") + parseFloat(completedInvoice.sgst_total || "0")) > 0 && (
-                  <div className="flex justify-between text-slate-500 text-[11px]">
-                    <span>GST (CGST + SGST):</span>
-                    <span className="font-mono">
-                      ₹{(parseFloat(completedInvoice.cgst_total || "0") + parseFloat(completedInvoice.sgst_total || "0")).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between text-base font-bold pt-2 border-t border-slate-300 text-slate-900">
-                  <span>Net Payable / Paid:</span>
-                  <span className="font-mono text-[#0F766E]">₹{completedInvoice.net_total}</span>
-                </div>
-                {parseFloat(completedInvoice.change_returned || "0") > 0 && (
-                  <div className="flex justify-between text-xs text-emerald-700 font-semibold pt-1">
-                    <span>Change Returned:</span>
-                    <span className="font-mono">₹{completedInvoice.change_returned}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons (Hidden when printing) */}
-              <div className="no-print space-y-2 pt-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className="py-2.5 px-3 rounded-xl border border-slate-300 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition"
-                  >
-                    <Printer className="w-4 h-4 text-slate-500" />
-                    <span>Print Receipt</span>
-                  </button>
-                  <Link
-                    href={`/dashboard/invoices`}
-                    className="py-2.5 px-3 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-xs font-semibold text-white flex items-center justify-center gap-1.5 shadow-2xs transition"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>All Invoices</span>
-                  </Link>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowReceiptModal(false);
-                    setCompletedInvoice(null);
-                    setActiveAttempt(null);
-                  }}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition"
-                >
-                  + Start Next Customer Bill
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static">
+          <div className="max-w-4xl w-full my-8 print:my-0 space-y-3">
+            <InvoicePrintDocument
+              invoice={completedInvoice}
+              organization={user?.organizations?.[0]}
+              showActions={true}
+              onPrint={() => window.print()}
+              onClose={() => {
+                setShowReceiptModal(false);
+                setCompletedInvoice(null);
+                setActiveAttempt(null);
+              }}
+            />
+            <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 print:hidden shadow-xs">
+              <Link
+                href="/dashboard/invoices"
+                className="px-3 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1.5 transition"
+              >
+                <FileText className="w-4 h-4 text-[#0F766E]" />
+                <span>All Sales Invoices</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setCompletedInvoice(null);
+                  setActiveAttempt(null);
+                }}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                + Start Next Customer Bill
+              </button>
             </div>
           </div>
         </div>
@@ -2473,10 +2516,10 @@ function CashierPOSScreen() {
       {/* 8. Camera Barcode Scanner Modal */}
       {showCameraScanner && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-200">
+          <div className="bg-white rounded -2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-200">
             <div className="bg-[#0F766E] text-white p-4 flex items-center justify-between">
               <h3 className="font-bold text-sm flex items-center gap-2">
-                <Camera className="w-4 h-4" />
+                <Camera className="w-2 h-4" />
                 <span>Live Camera Barcode Scanner</span>
               </h3>
               <button
@@ -2484,44 +2527,80 @@ function CashierPOSScreen() {
                 onClick={() => setShowCameraScanner(false)}
                 className="text-white/80 hover:text-white"
               >
-                <X className="w-4 h-4" />
+                <X className="w-2 h-4" />
               </button>
             </div>
 
             <div className="p-5 space-y-4">
               <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                Position the barcode on the medicine package inside the camera viewfinder. If your browser does not support native barcode detection, you can enter the barcode number below or click a product pill to add it instantly to the bill.
+                Hold the medicine barcode inside the camera viewfinder to automatically scan and add to the bill. You can also select the quantity multiplier or enter the barcode manually below.
+              </div>
+
+              {/* Quantity Multiplier Inside Camera Scanner */}
+              <div className="flex items-center justify-between bg-teal-50 border border-teal-200 rounded-xl p-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#0F766E]">
+                  <Hash className="w-4 h-4" />
+                  <span>Scan Quantity:</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center border border-teal-300 rounded-lg bg-white overflow-hidden shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setScanQty((q) => Math.max(1, q - 1))}
+                      className="w-7 h-7 flex items-center justify-center text-teal-800 hover:bg-teal-100 font-bold text-sm"
+                      title="Decrease quantity"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={scanQty}
+                      onChange={(e) => setScanQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-10 h-7 text-center font-bold text-xs bg-white text-teal-900 border-x border-teal-200 focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setScanQty((q) => q + 1)}
+                      className="w-7 h-7 flex items-center justify-center text-teal-800 hover:bg-teal-100 font-bold text-sm"
+                      title="Increase quantity"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {[1, 2, 5, 10].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setScanQty(num)}
+                      className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition ${
+                        scanQty === num
+                          ? "bg-[#0F766E] text-white border-[#0F766E]"
+                          : "bg-white text-teal-700 border-teal-300 hover:bg-teal-100"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {cameraError ? (
                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 space-y-2">
                   <div className="font-bold flex items-center gap-1.5">
                     <AlertCircle className="w-4 h-4" />
-                    <span>Camera Unavailable</span>
+                    <span>Camera Detection Note</span>
                   </div>
                   <p>{cameraError}</p>
                 </div>
               ) : (
-                <div className="relative bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center shadow-inner">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Aiming Reticle / Laser Guide */}
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div className="w-3/4 h-32 border-2 border-emerald-400/80 rounded-xl relative">
-                      <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-rose-500/80 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse" />
-                    </div>
-                  </div>
-
+                <div className="relative bg-slate-900 rounded-xl overflow-hidden min-h-[250px] flex items-center justify-center shadow-inner">
+                  <div id="html5qr-code-region" className="w-full h-full min-h-[250px]" />
                   {!isCameraActive && (
-                    <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white text-xs gap-2">
+                    <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white text-xs gap-2 z-10">
                       <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
-                      <span>Starting device camera...</span>
+                      <span>Starting camera barcode detector...</span>
                     </div>
                   )}
                 </div>
@@ -2535,7 +2614,7 @@ function CashierPOSScreen() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="e.g. 8901234567890"
+                    placeholder="e.g. 92126419405150"
                     value={testBarcodeQuery}
                     onChange={(e) => setTestBarcodeQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -2545,7 +2624,7 @@ function CashierPOSScreen() {
                           const code = testBarcodeQuery.trim();
                           setTestBarcodeQuery("");
                           setShowCameraScanner(false);
-                          processBarcodeOrSearch(code);
+                          processBarcodeOrSearch(code, scanQty);
                         }
                       }
                     }}
@@ -2558,26 +2637,26 @@ function CashierPOSScreen() {
                         const code = testBarcodeQuery.trim();
                         setTestBarcodeQuery("");
                         setShowCameraScanner(false);
-                        processBarcodeOrSearch(code);
+                        processBarcodeOrSearch(code, scanQty);
                       }
                     }}
                     className="px-3 py-2 bg-[#0F766E] hover:bg-[#115E59] text-white text-xs font-semibold rounded-xl"
                   >
-                    Lookup
+                    Lookup ({scanQty})
                   </button>
                 </div>
 
                 {/* Quick Store Product Pills in Camera Scanner */}
                 <div className="pt-2 flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Store Products:</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Store Quick Scan:</span>
                   <button
                     type="button"
                     onClick={() => {
                       setShowCameraScanner(false);
-                      processBarcodeOrSearch("92126419405150");
+                      processBarcodeOrSearch("92126419405150", scanQty);
                     }}
                     className="px-2.5 py-1 bg-white border border-teal-400 hover:bg-teal-50 text-[#0F766E] rounded-lg text-[11px] font-mono font-bold shadow-2xs"
-                    title="Levera 500 (Barcode in DB: 92126419405150) - 150 units in stock"
+                    title="Levera 500 (Barcode: 92126419405150) - 135 units in stock"
                   >
                     Levera 500 (92126419405150) — ₹195.00
                   </button>
@@ -2585,10 +2664,21 @@ function CashierPOSScreen() {
                     type="button"
                     onClick={() => {
                       setShowCameraScanner(false);
-                      processBarcodeOrSearch("MED-PARA-500");
+                      processBarcodeOrSearch("92126419405152", scanQty);
                     }}
                     className="px-2.5 py-1 bg-white border border-teal-400 hover:bg-teal-50 text-[#0F766E] rounded-lg text-[11px] font-mono font-bold shadow-2xs"
-                    title="Zodo 500 (SKU: MED-PARA-500) - 26 units in stock"
+                    title="Dolo 650 (Barcode: 92126419405152) - 50 units in stock"
+                  >
+                    Dolo 650 (92126419405152) — ₹235.00
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCameraScanner(false);
+                      processBarcodeOrSearch("MED-PARA-500", scanQty);
+                    }}
+                    className="px-2.5 py-1 bg-white border border-teal-400 hover:bg-teal-50 text-[#0F766E] rounded-lg text-[11px] font-mono font-bold shadow-2xs"
+                    title="Zodo 500 (SKU: MED-PARA-500) - 16 units in stock"
                   >
                     Zodo 500 (MED-PARA-500) — ₹200.00
                   </button>
@@ -2658,7 +2748,7 @@ function CashierPOSScreen() {
                 <span className="font-bold text-teal-900 block">
                   Interactive Scanner Test & Real Catalog Barcodes
                 </span>
-                <p className="text-[11px] text-teal-800">
+                <p className="text-[5px] text-teal-800">
                   Scan any package barcode right now to test your scanner gun, or click a verified product from your store:
                 </p>
 
@@ -2707,7 +2797,7 @@ function CashierPOSScreen() {
                     className="px-2.5 py-1 bg-white border border-teal-400 hover:bg-teal-100 text-[#0F766E] rounded-lg text-[11px] font-mono font-bold shadow-2xs"
                     title="Levera 500 (Barcode in DB: 92126419405150) - 150 units in stock"
                   >
-                    92126419405150 (Levera 500)
+                     92126419405150 (Levera 500)
                   </button>
                   <button
                     type="button"

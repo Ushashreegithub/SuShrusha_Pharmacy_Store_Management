@@ -44,6 +44,15 @@ from apps.billing.services import (
 )
 
 
+def _format_validation_error(e: DjangoValidationError) -> str:
+    """Safely extracts human-readable error messages without returning raw unformatted templates."""
+    if hasattr(e, "messages") and e.messages:
+        return "; ".join(e.messages)
+    if hasattr(e, "message_dict") and e.message_dict:
+        return "; ".join(f"{k}: {', '.join(v)}" for k, v in e.message_dict.items())
+    return str(e)
+
+
 class POSProductSearchView(APIView):
     """
     GET: Fast cashier medicine search across name, brand, generic, SKU, and barcode.
@@ -241,8 +250,7 @@ class SaleDraftItemView(APIView):
                 selected_batch_id=batch_id,
             )
         except DjangoValidationError as e:
-            msg = e.message if hasattr(e, "message") else str(e)
-            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         draft.refresh_from_db()
         return Response(SaleDraftSerializer(draft, context={"request": request}).data, status=status.HTTP_200_OK)
@@ -330,7 +338,7 @@ class SaleDraftHoldView(APIView):
         try:
             DraftBillingService.hold_draft(draft, notes=notes)
         except DjangoValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(SaleDraftSerializer(draft, context={"request": request}).data, status=status.HTTP_200_OK)
 
@@ -377,7 +385,7 @@ class DiscountRequestView(APIView):
                 reason=reason
             )
         except DjangoValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(DiscountApprovalRequestSerializer(req).data, status=status.HTTP_201_CREATED)
 
@@ -404,7 +412,7 @@ class DiscountReviewView(APIView):
                 rejection_reason=rejection_reason
             )
         except DjangoValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         draft = req.draft
         return Response(SaleDraftSerializer(draft, context={"request": request}).data, status=status.HTTP_200_OK)
@@ -432,7 +440,7 @@ class PrescriptionVerifyView(APIView):
                 doctor_name=doc_name
             )
         except DjangoValidationError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(SaleDraftSerializer(draft, context={"request": request}).data, status=status.HTTP_200_OK)
 
@@ -468,8 +476,7 @@ class CheckoutInitiateView(APIView):
                 idempotency_key=str(idempotency_key).strip(),
             )
         except DjangoValidationError as e:
-            msg = e.message if hasattr(e, "message") else str(e)
-            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = CheckoutAttemptSerializer(attempt)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -498,8 +505,7 @@ class CheckoutPaymentView(APIView):
                 payment_data=payment_data,
             )
         except DjangoValidationError as e:
-            msg = e.message if hasattr(e, "message") else str(e)
-            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
             "payment": PaymentSerializer(payment).data,
@@ -533,8 +539,7 @@ class CheckoutPaymentVerifyView(APIView):
                 verification_notes=notes,
             )
         except DjangoValidationError as e:
-            msg = e.message if hasattr(e, "message") else str(e)
-            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
             "payment": PaymentSerializer(payment).data,
@@ -563,8 +568,7 @@ class CheckoutFinalizeView(APIView):
                 idempotency_key=str(idempotency_key).strip() if idempotency_key else None,
             )
         except DjangoValidationError as e:
-            msg = e.message if hasattr(e, "message") else str(e)
-            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
             "status": "success",
@@ -630,8 +634,7 @@ class CheckoutView(APIView):
                 idempotency_key=str(idempotency_key).strip(),
             )
         except DjangoValidationError as e:
-            msg = e.message if hasattr(e, "message") else str(e)
-            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _format_validation_error(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = InvoiceSerializer(invoice, context={"request": request})
         return Response(
@@ -656,7 +659,7 @@ class InvoiceListView(APIView):
 
         qs = Invoice.objects.filter(store=store).select_related(
             "cashier", "customer", "store", "organization"
-        ).prefetch_related("items", "payments")
+        ).prefetch_related("items", "items__batch_allocations", "payments")
 
         search = request.query_params.get("search", "").strip()
         if search:
@@ -666,9 +669,20 @@ class InvoiceListView(APIView):
                 Q(customer_phone__icontains=search)
             )
 
-        status_filter = request.query_params.get("status", "").strip().upper()
+        status_filter = (
+            request.query_params.get("payment_status")
+            or request.query_params.get("status", "")
+        ).strip().upper()
         if status_filter:
-            qs = qs.filter(status=status_filter)
+            qs = qs.filter(payment_status=status_filter)
+
+        start_date = request.query_params.get("start_date", "").strip()
+        if start_date:
+            qs = qs.filter(created_at__date__gte=start_date)
+
+        end_date = request.query_params.get("end_date", "").strip()
+        if end_date:
+            qs = qs.filter(created_at__date__lte=end_date)
 
         page_num = max(1, int(request.query_params.get("page", 1)))
         page_size = min(max(1, int(request.query_params.get("page_size", 20))), 100)
@@ -694,17 +708,25 @@ class InvoiceListView(APIView):
 class InvoiceDetailView(APIView):
     """
     GET: Retrieve full digital invoice details.
+    Supports both store-scoped and direct invoice retrieval with tenant authorization.
     """
     permission_classes = [IsAuthenticated, CanAccessBilling]
 
-    def get(self, request, store_id, invoice_id):
-        store = get_object_or_404(Store.objects.select_related("organization"), id=store_id)
-        self.check_object_permissions(request, store)
+    def get(self, request, invoice_id, store_id=None):
+        if store_id:
+            store = get_object_or_404(Store.objects.select_related("organization"), id=store_id)
+            self.check_object_permissions(request, store)
+            invoice = get_object_or_404(
+                Invoice.objects.select_related("cashier", "customer", "store", "organization").prefetch_related("items", "items__batch_allocations", "payments"),
+                id=invoice_id,
+                store=store
+            )
+        else:
+            invoice = get_object_or_404(
+                Invoice.objects.select_related("cashier", "customer", "store", "organization").prefetch_related("items", "items__batch_allocations", "payments"),
+                id=invoice_id,
+            )
+            self.check_object_permissions(request, invoice.store)
 
-        invoice = get_object_or_404(
-            Invoice.objects.select_related("cashier", "customer", "store", "organization").prefetch_related("items", "items__batch_allocations", "payments"),
-            id=invoice_id,
-            store=store
-        )
         serializer = InvoiceSerializer(invoice, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
