@@ -108,6 +108,7 @@ class Product(models.Model):
     name = models.CharField(max_length=255, db_index=True, help_text="Commercial / product trade name")
     brand_name = models.CharField(max_length=255, blank=True, default="", db_index=True, help_text="Brand or Trade label")
     generic_name = models.CharField(max_length=255, blank=True, default="", db_index=True, help_text="Active Pharmaceutical Ingredient (API) / Generic formulation")
+    composition = models.CharField(max_length=500, blank=True, default="", help_text="Salt composition or combined active ingredients")
     
     sku = models.CharField(max_length=100, db_index=True, help_text="Stock Keeping Unit identifier unique within the organization")
     barcode = models.CharField(max_length=100, blank=True, default="", db_index=True, help_text="EAN / UPC / GTIN barcode if available")
@@ -147,6 +148,16 @@ class Product(models.Model):
 
     # Storage & Handling
     storage_condition = models.CharField(max_length=40, choices=STORAGE_CHOICES, default="room_temperature")
+    minimum_stock_level = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional minimum stock warning threshold in atomic base units"
+    )
+    reorder_level = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional reorder trigger threshold in atomic base units"
+    )
     description = models.TextField(blank=True, default="", help_text="Optional pharmacological notes, warnings, or handling instructions")
 
     # Status
@@ -208,4 +219,64 @@ class Product(models.Model):
         if self.conversion_factor < 1:
             self.conversion_factor = 1
         super().save(*args, **kwargs)
+
+
+class ProductImportBatch(models.Model):
+    """
+    Tracks an organization-scoped Excel medicine catalogue preview and import execution.
+    Ensures idempotent retries and auditable import reporting without touching stock ledgers.
+    """
+    STATUS_CHOICES = [
+        ("PREVIEWED", "Previewed"),
+        ("COMPLETED", "Completed"),
+        ("FAILED", "Failed"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="product_import_batches",
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="product_import_batches",
+    )
+    file_name = models.CharField(max_length=255)
+    file_hash = models.CharField(max_length=64, blank=True, default="")
+    idempotency_key = models.CharField(max_length=128, null=True, blank=True, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PREVIEWED", db_index=True)
+
+    total_rows = models.PositiveIntegerField(default=0)
+    valid_rows = models.PositiveIntegerField(default=0)
+    invalid_rows = models.PositiveIntegerField(default=0)
+    duplicate_rows = models.PositiveIntegerField(default=0)
+    ready_rows = models.PositiveIntegerField(default=0)
+    imported_count = models.PositiveIntegerField(default=0)
+    skipped_duplicate_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+
+    preview_payload = models.JSONField(default=dict, blank=True)
+    result_summary = models.JSONField(default=dict, blank=True)
+    error_message = models.TextField(blank=True, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "product_import_batches"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "idempotency_key"],
+                condition=Q(idempotency_key__isnull=False) & ~Q(idempotency_key=""),
+                name="unique_product_import_idempotency_per_org",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Import {self.file_name} [{self.status}] ({self.organization.name})"
 

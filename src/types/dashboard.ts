@@ -172,6 +172,7 @@ export interface Product {
   name: string;
   brand_name: string;
   generic_name: string;
+  composition?: string;
   sku: string;
   barcode: string;
   hsn_code: string;
@@ -194,6 +195,8 @@ export interface Product {
   gst_rate: string | number;
   storage_condition: string;
   storage_condition_display?: string;
+  minimum_stock_level?: number | null;
+  reorder_level?: number | null;
   description?: string;
   is_active: boolean;
   created_by?: string;
@@ -208,7 +211,8 @@ export interface ProductCreatePayload {
   name: string;
   brand_name?: string;
   generic_name?: string;
-  sku: string;
+  composition?: string;
+  sku?: string;
   barcode?: string;
   hsn_code?: string;
   item_type?: string;
@@ -225,8 +229,61 @@ export interface ProductCreatePayload {
   is_loose_dispensing_allowed?: boolean;
   gst_rate?: string | number;
   storage_condition?: string;
+  minimum_stock_level?: number | null;
+  reorder_level?: number | null;
   description?: string;
   is_active?: boolean;
+}
+
+export interface ProductImportPreviewRow {
+  row_number: number;
+  status: "READY" | "INVALID" | "DUPLICATE";
+  issue_type: string;
+  reason: string;
+  errors: string[];
+  name: string;
+  generic_name: string;
+  brand_name: string;
+  composition: string;
+  strength: string;
+  dosage_form: string;
+  manufacturer: string;
+  category: string;
+  sku: string;
+  barcode: string;
+  hsn_code: string;
+  base_unit: string;
+  sale_unit: string;
+  conversion_factor: number;
+  pack_description: string;
+  prescription_class: string;
+  gst_rate: string;
+  minimum_stock_level?: number | null;
+  reorder_level?: number | null;
+}
+
+export interface ProductImportPreviewResponse {
+  batch_id: string;
+  file_name: string;
+  summary: {
+    total_rows: number;
+    valid_rows: number;
+    invalid_rows: number;
+    duplicate_rows: number;
+    ready_to_import: number;
+  };
+  rows: ProductImportPreviewRow[];
+}
+
+export interface ProductImportConfirmResponse {
+  batch_id: string;
+  file_name: string;
+  imported_count: number;
+  skipped_duplicate_count: number;
+  failed_count: number;
+  concurrent_skipped: Array<{ row_number: number; name: string; reason: string }>;
+  batches_processed?: number;
+  idempotent_replay?: boolean;
 }
 
 export interface ProductListResponse {

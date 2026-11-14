@@ -91,3 +91,25 @@ class CanManageProducts(permissions.BasePermission):
 
         return is_user_owner_or_manager(request.user, org)
 
+
+class CanImportProducts(permissions.BasePermission):
+    """
+    Permission class for bulk Excel medicine catalogue import.
+    Strictly matches existing product write permissions (Owners and Store Managers only).
+    """
+    message = "Only organization owners and store managers can import medicines into the catalogue."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        org = get_user_organization(request.user)
+        if not org:
+            self.message = "You are not assigned to an active pharmacy organization."
+            return False
+
+        if not is_user_owner_or_manager(request.user, org):
+            return False
+
+        return True
+

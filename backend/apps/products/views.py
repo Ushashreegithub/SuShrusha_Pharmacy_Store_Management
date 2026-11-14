@@ -2,17 +2,26 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.paginator import Paginator, EmptyPage
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
-from apps.products.models import Product
+from apps.products.models import Product, ProductImportBatch
 from apps.products.serializers import (
     ProductListSerializer,
     ProductDetailSerializer,
     ProductCreateUpdateSerializer,
 )
-from apps.products.permissions import CanManageProducts, get_user_organization
+from apps.products.permissions import CanManageProducts, CanImportProducts, get_user_organization
+from apps.products.import_service import (
+    ExcelValidationError,
+    build_medicine_template_workbook,
+    build_import_error_report_workbook,
+    parse_and_preview_catalogue_excel,
+    execute_catalogue_import,
+)
 from apps.audit.models import AuditEvent
 
 
@@ -85,6 +94,7 @@ class ProductListCreateView(APIView):
                 Q(name__icontains=search)
                 | Q(brand_name__icontains=search)
                 | Q(generic_name__icontains=search)
+                | Q(composition__icontains=search)
                 | Q(sku__icontains=search)
                 | Q(barcode__icontains=search)
                 | Q(manufacturer__icontains=search)
@@ -292,4 +302,127 @@ class ProductReactivateView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class ProductImportTemplateView(APIView):
+    """
+    GET: Download standardized .xlsx medicine catalogue import template with sample rows and column notes.
+    """
+    permission_classes = [IsAuthenticated, CanImportProducts]
+
+    def get(self, request):
+        content = build_medicine_template_workbook()
+        response = HttpResponse(
+            content,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="PharmaPro_Medicine_Catalogue_Template.xlsx"'
+        return response
+
+
+class ProductImportPreviewView(APIView):
+    """
+    POST: Upload and validate an Excel (.xlsx) medicine catalogue before importing.
+    """
+    permission_classes = [IsAuthenticated, CanImportProducts]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        org = get_user_organization(request.user)
+        if not org:
+            return Response(
+                {"detail": "No active pharmacy organization found for this account."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        uploaded_file = request.FILES.get("file")
+        if not uploaded_file:
+            return Response(
+                {"detail": "Please choose an Excel (.xlsx) file to upload."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            _, preview_data = parse_and_preview_catalogue_excel(org, request.user, uploaded_file)
+        except ExcelValidationError as exc:
+            return Response(
+                {"detail": exc.message, **exc.details},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(preview_data, status=status.HTTP_200_OK)
+
+
+class ProductImportConfirmView(APIView):
+    """
+    POST: Commit validated medicines from a previewed batch into the organization catalogue.
+    Strictly idempotent and creates zero stock/batch/movement records.
+    """
+    permission_classes = [IsAuthenticated, CanImportProducts]
+
+    def post(self, request):
+        org = get_user_organization(request.user)
+        if not org:
+            return Response(
+                {"detail": "No active pharmacy organization found for this account."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        batch_id = request.data.get("batch_id")
+        if not batch_id:
+            return Response(
+                {"detail": "Upload preview reference is required before confirming import."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        idempotency_key = (
+            request.headers.get("Idempotency-Key")
+            or request.META.get("HTTP_IDEMPOTENCY_KEY")
+            or request.data.get("idempotency_key")
+        )
+
+        try:
+            _, summary, replayed = execute_catalogue_import(
+                organization=org,
+                user=request.user,
+                batch_id=batch_id,
+                idempotency_key=idempotency_key,
+                request=request,
+            )
+        except ExcelValidationError as exc:
+            return Response({"detail": exc.message, **exc.details}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response(
+                {"detail": "Import failed before saving medicines. No partial medicines were added."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {**summary, "idempotent_replay": replayed},
+            status=status.HTTP_200_OK if replayed else status.HTTP_201_CREATED,
+        )
+
+
+class ProductImportErrorReportView(APIView):
+    """
+    GET: Download an Excel error report (.xlsx) containing original row numbers and reasons.
+    """
+    permission_classes = [IsAuthenticated, CanImportProducts]
+
+    def get(self, request, batch_id):
+        org = get_user_organization(request.user)
+        if not org:
+            return Response(
+                {"detail": "No active pharmacy organization found for this account."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        batch = get_object_or_404(ProductImportBatch, id=batch_id, organization=org)
+        content = build_import_error_report_workbook(batch)
+        response = HttpResponse(
+            content,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="PharmaPro_Import_Issues_Report.xlsx"'
+        return response
 

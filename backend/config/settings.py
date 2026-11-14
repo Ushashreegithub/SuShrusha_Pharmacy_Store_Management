@@ -182,6 +182,7 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
     "idempotency-key",
 ]
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 
 # Cookie Security & SameSite settings
 SESSION_COOKIE_HTTPONLY = True
@@ -208,3 +209,9 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() in ("true", "1", "yes")
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", 10))
+
+# Medicine Catalogue Bulk Excel Import Configuration
+PRODUCT_IMPORT_MAX_FILE_SIZE_BYTES = int(os.getenv("PRODUCT_IMPORT_MAX_FILE_SIZE_BYTES", 5 * 1024 * 1024))
+PRODUCT_IMPORT_MAX_ROWS = int(os.getenv("PRODUCT_IMPORT_MAX_ROWS", 5000))
+PRODUCT_IMPORT_BATCH_SIZE = int(os.getenv("PRODUCT_IMPORT_BATCH_SIZE", 250))
+PRODUCT_IMPORT_ALLOWED_GST_RATES = ("0.00", "5.00", "12.00", "18.00", "28.00")

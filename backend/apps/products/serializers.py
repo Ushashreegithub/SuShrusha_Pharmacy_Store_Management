@@ -1,7 +1,36 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+import re
+import uuid
+from django.conf import settings
 from rest_framework import serializers
 from django.db.models import Q
 from apps.products.models import Product
+
+
+def get_allowed_gst_rates():
+    raw = getattr(settings, "PRODUCT_IMPORT_ALLOWED_GST_RATES", ("0.00", "5.00", "12.00", "18.00", "28.00"))
+    return {Decimal(str(r)).quantize(Decimal("0.01")) for r in raw}
+
+
+def generate_unique_org_sku(organization, name, reserved_skus=None):
+    """
+    Generate an uppercase organization-scoped SKU when omitted in bulk import or quick add.
+    """
+    cleaned = re.sub(r"[^A-Z0-9]+", "", (name or "MED").upper())
+    prefix = cleaned[:8] or "ITEM"
+    reserved = reserved_skus if reserved_skus is not None else set()
+
+    for _ in range(20):
+        suffix = uuid.uuid4().hex[:6].upper()
+        candidate = f"MED-{prefix}-{suffix}"
+        if candidate in reserved:
+            continue
+        if not Product.objects.filter(organization=organization, sku__iexact=candidate).exists():
+            reserved.add(candidate)
+            return candidate
+    fallback = f"MED-{uuid.uuid4().hex[:10].upper()}"
+    reserved.add(fallback)
+    return fallback
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -21,6 +50,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "name",
             "brand_name",
             "generic_name",
+            "composition",
             "sku",
             "barcode",
             "hsn_code",
@@ -43,6 +73,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             "gst_rate",
             "storage_condition",
             "storage_condition_display",
+            "minimum_stock_level",
+            "reorder_level",
             "is_active",
             "created_at",
             "updated_at",
@@ -72,6 +104,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "name",
             "brand_name",
             "generic_name",
+            "composition",
             "sku",
             "barcode",
             "hsn_code",
@@ -94,6 +127,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "gst_rate",
             "storage_condition",
             "storage_condition_display",
+            "minimum_stock_level",
+            "reorder_level",
             "description",
             "is_active",
             "created_by",
@@ -126,8 +161,9 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """
     Validates and persists Product creation or updates.
     Enforces tenant-scoped SKU and Barcode uniqueness.
+    Supports optional auto-SKU generation when allow_auto_sku=True in serializer context.
     """
-    sku = serializers.CharField(max_length=100, required=True)
+    sku = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     barcode = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     conversion_factor = serializers.IntegerField(min_value=1, default=1)
     gst_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal("0.00"), default=Decimal("12.00"))
@@ -138,6 +174,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             "name",
             "brand_name",
             "generic_name",
+            "composition",
             "sku",
             "barcode",
             "hsn_code",
@@ -155,6 +192,8 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             "is_loose_dispensing_allowed",
             "gst_rate",
             "storage_condition",
+            "minimum_stock_level",
+            "reorder_level",
             "description",
             "is_active",
         ]
@@ -166,8 +205,10 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         return val
 
     def validate_sku(self, value):
-        val = value.strip().upper()
+        val = value.strip().upper() if value else ""
         if not val:
+            if self.context.get("allow_auto_sku"):
+                return ""
             raise serializers.ValidationError("SKU code is required.")
         organization = self.context.get("organization")
         if not organization:
@@ -180,6 +221,19 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError(f"A product with SKU '{val}' already exists in your organization.")
         return val
+
+    def validate_gst_rate(self, value):
+        if value is None:
+            return Decimal("12.00")
+        try:
+            q = Decimal(str(value)).quantize(Decimal("0.01"))
+        except (InvalidOperation, ValueError):
+            raise serializers.ValidationError("Enter a valid numeric GST percentage.")
+        allowed = get_allowed_gst_rates()
+        if q not in allowed:
+            allowed_labels = ", ".join(f"{r}%" for r in sorted(allowed))
+            raise serializers.ValidationError(f"Unsupported GST rate. Supported GST rates are: {allowed_labels}.")
+        return q
 
     def validate_barcode(self, value):
         val = value.strip() if value else ""
@@ -199,8 +253,18 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         return val
 
     def validate(self, attrs):
+        # Require explicit SKU when creating normally (unless partial PATCH or allow_auto_sku=True)
+        if not self.instance and not self.partial:
+            if not attrs.get("sku"):
+                if self.context.get("allow_auto_sku"):
+                    organization = self.context.get("organization")
+                    if organization:
+                        attrs["sku"] = generate_unique_org_sku(organization, attrs.get("name", ""))
+                else:
+                    raise serializers.ValidationError({"sku": "SKU code is required."})
+
         # Clean string fields
-        for field in ["brand_name", "generic_name", "manufacturer", "strength", "hsn_code", "pack_description", "description"]:
+        for field in ["brand_name", "generic_name", "composition", "manufacturer", "strength", "hsn_code", "pack_description", "description"]:
             if field in attrs and isinstance(attrs[field], str):
                 attrs[field] = attrs[field].strip()
 

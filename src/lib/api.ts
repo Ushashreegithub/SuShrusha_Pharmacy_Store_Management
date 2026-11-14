@@ -21,6 +21,8 @@ import {
   ProductCreatePayload,
   ProductListResponse,
   ProductMetadata,
+  ProductImportPreviewResponse,
+  ProductImportConfirmResponse,
 } from "@/types/dashboard";
 
 export function getApiBaseUrl(): string {
@@ -517,6 +519,87 @@ export async function reactivateProductApi(id: string): Promise<{ message: strin
 
 export async function getProductMetadataApi(): Promise<ProductMetadata> {
   return apiFetch<ProductMetadata>("/products/metadata/");
+}
+
+async function downloadAuthenticatedFile(endpoint: string, fallbackFilename: string): Promise<void> {
+  const base = getApiBaseUrl();
+  const url = `${base}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+    });
+  } catch {
+    throw new ApiError("Unable to reach the PharmaPro server. Please check your connection.", 0);
+  }
+
+  if (!response.ok) {
+    let message = "Unable to download the Excel file.";
+    try {
+      const errData = await response.json();
+      if (typeof errData?.detail === "string") {
+        message = errData.detail;
+      }
+    } catch {
+      // Ignore non-JSON error body
+    }
+    throw new ApiError(message, response.status);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  const filename = match?.[1] || fallbackFilename;
+
+  const objectUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(objectUrl);
+}
+
+export async function downloadProductImportTemplateApi(): Promise<void> {
+  return downloadAuthenticatedFile(
+    "/products/import/template/",
+    "PharmaPro_Medicine_Catalogue_Template.xlsx"
+  );
+}
+
+export async function previewProductImportApi(file: File): Promise<ProductImportPreviewResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<ProductImportPreviewResponse>("/products/import/preview/", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function confirmProductImportApi(
+  batchId: string,
+  idempotencyKey?: string
+): Promise<ProductImportConfirmResponse> {
+  const key =
+    idempotencyKey ||
+    (typeof crypto !== "undefined" ? crypto.randomUUID() : Math.random().toString(36).substring(2));
+  return apiFetch<ProductImportConfirmResponse>("/products/import/confirm/", {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": key,
+    },
+    body: JSON.stringify({ batch_id: batchId, idempotency_key: key }),
+  });
+}
+
+export async function downloadProductImportErrorsApi(batchId: string): Promise<void> {
+  return downloadAuthenticatedFile(
+    `/products/import/${batchId}/error-report/`,
+    "PharmaPro_Import_Issues_Report.xlsx"
+  );
 }
 
 // ---------------------------------------------------------------------------

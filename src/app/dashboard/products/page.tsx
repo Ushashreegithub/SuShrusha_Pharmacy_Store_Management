@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  FileSpreadsheet,
 } from "lucide-react";
 import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
@@ -159,6 +160,7 @@ function ProductsContent() {
   const [name, setName] = useState("");
   const [brandName, setBrandName] = useState("");
   const [genericName, setGenericName] = useState("");
+  const [composition, setComposition] = useState("");
   const [sku, setSku] = useState("");
   const [barcode, setBarcode] = useState("");
   const [hsnCode, setHsnCode] = useState("");
@@ -176,6 +178,8 @@ function ProductsContent() {
   const [isLooseDispensing, setIsLooseDispensing] = useState(true);
   const [gstRate, setGstRate] = useState("12.00");
   const [storageCondition, setStorageCondition] = useState("room_temperature");
+  const [minimumStockLevel, setMinimumStockLevel] = useState("");
+  const [reorderLevel, setReorderLevel] = useState("");
   const [description, setDescription] = useState("");
 
   // Product Detail Modal State
@@ -241,6 +245,7 @@ function ProductsContent() {
     setName("");
     setBrandName("");
     setGenericName("");
+    setComposition("");
     setSku("");
     setBarcode("");
     setHsnCode("");
@@ -258,6 +263,8 @@ function ProductsContent() {
     setIsLooseDispensing(true);
     setGstRate("12.00");
     setStorageCondition("room_temperature");
+    setMinimumStockLevel("");
+    setReorderLevel("");
     setDescription("");
     setFormTab("basic");
     setFormErrors({});
@@ -271,6 +278,7 @@ function ProductsContent() {
     setName(p.name);
     setBrandName(p.brand_name || "");
     setGenericName(p.generic_name || "");
+    setComposition(p.composition || "");
     setSku(p.sku);
     setBarcode(p.barcode || "");
     setHsnCode(p.hsn_code || "");
@@ -288,6 +296,16 @@ function ProductsContent() {
     setIsLooseDispensing(Boolean(p.is_loose_dispensing_allowed));
     setGstRate(String(p.gst_rate || "12.00"));
     setStorageCondition(p.storage_condition || "room_temperature");
+    setMinimumStockLevel(
+      p.minimum_stock_level !== null && p.minimum_stock_level !== undefined
+        ? String(p.minimum_stock_level)
+        : ""
+    );
+    setReorderLevel(
+      p.reorder_level !== null && p.reorder_level !== undefined
+        ? String(p.reorder_level)
+        : ""
+    );
     setDescription(p.description || "");
     setFormTab("basic");
     setFormErrors({});
@@ -324,6 +342,7 @@ function ProductsContent() {
       name: name.trim(),
       brand_name: brandName.trim(),
       generic_name: genericName.trim(),
+      composition: composition.trim(),
       sku: sku.trim().toUpperCase(),
       barcode: barcode.trim(),
       hsn_code: hsnCode.trim(),
@@ -341,6 +360,8 @@ function ProductsContent() {
       is_loose_dispensing_allowed: isLooseDispensing,
       gst_rate: Number(gstRate),
       storage_condition: storageCondition,
+      minimum_stock_level: minimumStockLevel.trim() === "" ? null : Number(minimumStockLevel),
+      reorder_level: reorderLevel.trim() === "" ? null : Number(reorderLevel),
       description: description.trim(),
     };
 
@@ -407,22 +428,34 @@ function ProductsContent() {
             Refresh
           </Button>
           {canManage && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleOpenAddModal}
-              className="text-xs bg-[#0F766E] hover:bg-[#115E59]"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Add Product
-            </Button>
+            <>
+              <Link href="/dashboard/products/import">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-[#0F766E] text-[#0F766E] hover:bg-teal-50"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+                  Import Medicines from Excel
+                </Button>
+              </Link>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleOpenAddModal}
+                className="text-xs bg-[#0F766E] hover:bg-[#115E59]"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Add Product
+              </Button>
+            </>
           )}
         </div>
       }
     >
       <div className="space-y-4">
         {/* Navigation Tabs between Product Master and Batches & Expiry */}
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
           <Link
             href="/dashboard/products"
             className="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-[#0F766E] text-white shadow-xs flex items-center gap-2"
@@ -430,6 +463,15 @@ function ProductsContent() {
             <Package className="w-3.5 h-3.5" />
             Medicine Catalog
           </Link>
+          {canManage && (
+            <Link
+              href="/dashboard/products/import"
+              className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Import Medicines from Excel
+            </Link>
+          )}
           <Link
             href="/dashboard/batches"
             className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2"
@@ -957,6 +999,14 @@ function ProductsContent() {
                     helperText="Important for prescription matching & generic substitution"
                   />
 
+                  <Input
+                    label="Salt Composition (Optional)"
+                    placeholder="e.g. Paracetamol IP 500mg + Caffeine 30mg"
+                    value={composition}
+                    onChange={(e) => setComposition(e.target.value)}
+                    error={formErrors.composition}
+                  />
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Input
                       label="Strength / Potency"
@@ -1138,6 +1188,27 @@ function ProductsContent() {
                     </select>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      label="Minimum Stock Level (Base Units, Optional)"
+                      type="number"
+                      min={0}
+                      placeholder="e.g. 20"
+                      value={minimumStockLevel}
+                      onChange={(e) => setMinimumStockLevel(e.target.value)}
+                      error={formErrors.minimum_stock_level}
+                    />
+                    <Input
+                      label="Reorder Level (Base Units, Optional)"
+                      type="number"
+                      min={0}
+                      placeholder="e.g. 50"
+                      value={reorderLevel}
+                      onChange={(e) => setReorderLevel(e.target.value)}
+                      error={formErrors.reorder_level}
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Pharmacological / Handling Notes (Optional)
@@ -1255,6 +1326,12 @@ function ProductsContent() {
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Generic Formulation</span>
                 <span className="font-semibold text-slate-800">{activeProduct.generic_name || "—"}</span>
               </div>
+              {activeProduct.composition && (
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 col-span-2">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Composition</span>
+                  <span className="font-semibold text-slate-800">{activeProduct.composition}</span>
+                </div>
+              )}
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Strength</span>
                 <span className="font-semibold text-slate-800">{activeProduct.strength || "—"}</span>
