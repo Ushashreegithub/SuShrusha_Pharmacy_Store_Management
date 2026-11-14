@@ -1,6 +1,7 @@
 from rest_framework import permissions
 from apps.organizations.models import OrganizationMembership, StoreMembership
 from apps.inventory.permissions import is_user_org_owner, is_user_assigned_store_manager, is_user_store_member
+from apps.organizations.tenant_context import get_authoritative_organization
 
 
 def get_user_store_role(user, store) -> str | None:
@@ -17,7 +18,7 @@ class CanAccessBilling(permissions.BasePermission):
     """
     Allows billing operations (POS, drafts, customer lookup) to active store members
     (Owner, Store Manager, Cashier, Pharmacist, Staff).
-    Rejects cross-tenant access and unassigned users.
+    Rejects cross-tenant access, unauthorized store access, and unassigned users.
     """
     message = "You do not have cashier/billing permissions for this store."
 
@@ -27,6 +28,10 @@ class CanAccessBilling(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         store = getattr(obj, "store", obj)
         if not store:
+            return False
+        # Enforce store belongs to the authoritative active organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and store.organization_id != active_org.id:
             return False
         return is_user_store_member(request.user, store)
 
@@ -46,6 +51,9 @@ class CanApproveDiscount(permissions.BasePermission):
         store = getattr(obj, "store", obj)
         if not store:
             return False
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and store.organization_id != active_org.id:
+            return False
         return is_user_org_owner(request.user, store.organization) or is_user_assigned_store_manager(request.user, store)
 
 
@@ -64,8 +72,10 @@ class CanAuthorizePrescription(permissions.BasePermission):
         store = getattr(obj, "store", obj)
         if not store:
             return False
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and store.organization_id != active_org.id:
+            return False
         if is_user_org_owner(request.user, store.organization):
             return True
         role = get_user_store_role(request.user, store)
         return role in ["manager", "pharmacist"]
-

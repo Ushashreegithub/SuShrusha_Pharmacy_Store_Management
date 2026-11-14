@@ -30,14 +30,22 @@ class InvitationListCreateView(APIView):
         status_filter = request.query_params.get("status", "").strip()
         store_filter = request.query_params.get("store_id", "").strip()
 
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = get_authoritative_organization(request)
+        if not active_org:
+            return Response(
+                {"detail": "No active organization found for this request."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         # Check Owner Scope
         owner_membership = OrganizationMembership.objects.filter(
-            user=user, role="owner", is_active=True
+            organization=active_org, user=user, role="owner", is_active=True
         ).first()
 
         if owner_membership:
             qs = EmployeeInvitation.objects.filter(
-                organization=owner_membership.organization
+                organization=active_org
             ).select_related("store", "organization", "invited_by")
 
             if status_filter:
@@ -48,8 +56,9 @@ class InvitationListCreateView(APIView):
             serializer = InvitationDetailSerializer(qs, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Check Manager Scope
+        # Check Manager Scope (scoped to active_org)
         managed_stores = Store.objects.filter(
+            organization=active_org,
             memberships__user=user,
             memberships__role="manager",
             memberships__is_active=True,

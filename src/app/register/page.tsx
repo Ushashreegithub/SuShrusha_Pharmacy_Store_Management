@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthSplitLayout } from "@/components/auth/AuthSplitLayout";
@@ -11,11 +11,36 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { SecurityNotice } from "@/components/auth/SecurityNotice";
 import { Alert } from "@/components/ui/Alert";
-import { User, Mail, Phone, Building2, AlertCircle } from "lucide-react";
-import { registerOwnerApi, ApiError } from "@/lib/api";
+import { User, Mail, Phone, Building2, AlertCircle, Lock } from "lucide-react";
+import { registerOwnerApi, getPublicRegistrationStatusApi, ApiError } from "@/lib/api";
 
 export default function OwnerRegistrationPage() {
   const router = useRouter();
+
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean>(true);
+  const [checkingStatus, setCheckingStatus] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function checkStatus() {
+      try {
+        const res = await getPublicRegistrationStatusApi();
+        if (isMounted) {
+          setRegistrationEnabled(Boolean(res.public_registration_enabled));
+        }
+      } catch {
+        // Fallback safely; server enforces on submit regardless
+      } finally {
+        if (isMounted) {
+          setCheckingStatus(false);
+        }
+      }
+    }
+    checkStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -145,6 +170,16 @@ export default function OwnerRegistrationPage() {
     } catch (err: any) {
       if (
         err instanceof ApiError &&
+        (err.code === "registration_disabled" || err.status === 403)
+      ) {
+        setRegistrationEnabled(false);
+        setIsDuplicateEmail(false);
+        setServerError(
+          err.message ||
+            "Public pharmacy registration is currently disabled by the platform administrator."
+        );
+      } else if (
+        err instanceof ApiError &&
         (err.code === "email_already_registered" || err.status === 409)
       ) {
         setIsDuplicateEmail(true);
@@ -164,6 +199,43 @@ export default function OwnerRegistrationPage() {
       setIsLoading(false);
     }
   };
+
+  if (!checkingStatus && !registrationEnabled) {
+    return (
+      <AuthSplitLayout
+        title="Registration Currently Closed"
+        subtitle="Public pharmacy onboarding is restricted by the platform administrator."
+      >
+        <div className="space-y-5">
+          <div className="p-5 rounded-xl border border-amber-200 bg-amber-50 text-amber-950 space-y-3 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-sm text-amber-950">
+                  Public Registration Disabled
+                </h3>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  {serverError ||
+                    "New public pharmacy owner signups are temporarily paused. Existing pharmacy owners, managers, and staff members can continue signing in normally."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            <Link
+              href="/login"
+              className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-[#0F766E] hover:bg-[#0d655e] text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
+            >
+              Sign In to Existing Account &rarr;
+            </Link>
+          </div>
+        </div>
+      </AuthSplitLayout>
+    );
+  }
 
   return (
     <AuthSplitLayout

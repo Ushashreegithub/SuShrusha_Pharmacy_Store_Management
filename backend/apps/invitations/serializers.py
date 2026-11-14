@@ -22,6 +22,11 @@ class CreateInvitationSerializer(serializers.Serializer):
         if not store:
             raise serializers.ValidationError({"store_id": "Specified store branch does not exist."})
 
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = get_authoritative_organization(self.context.get("request"))
+        if active_org and store.organization_id != active_org.id:
+            raise serializers.ValidationError({"store_id": "Specified store branch does not exist."})
+
         # Check permissions
         is_owner = OrganizationMembership.objects.filter(
             organization=store.organization, user=user, role="owner", is_active=True

@@ -51,20 +51,30 @@ export function DashboardLayout({
   action,
 }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user, organization, stores, activeStore, setActiveStoreId, isLoading, handleLogout } =
+  const { user, organization, stores, activeStore, setActiveStoreId, switchOrganization, isLoading, handleLogout } =
     useDashboard();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [logoImageFailed, setLogoImageFailed] = useState(false);
 
-  if (isLoading) {
+  // Redirect barrier: Partner Owners belong in /sushrusha/partner, never /dashboard
+  React.useEffect(() => {
+    if (user && (user.portal_role === "PARTNER_OWNER" || Boolean(user.active_partner))) {
+      window.location.href = "/sushrusha/partner";
+    }
+  }, [user]);
+
+  if (isLoading || (user && (user.portal_role === "PARTNER_OWNER" || Boolean(user.active_partner)))) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
         <div className="w-9 h-9 border-3 border-[#0F766E] border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-sm font-medium text-slate-600">
-          Loading Workspace...
+          {user && (user.portal_role === "PARTNER_OWNER" || Boolean(user.active_partner))
+            ? "Redirecting to Partner Portal..."
+            : "Loading Workspace..."}
         </p>
       </div>
     );
@@ -75,7 +85,7 @@ export function DashboardLayout({
   const role = user.primary_role || "none";
   const isOwner = role === "owner" || user.organizations?.some((o) => o.is_owner);
   const isManager = role === "manager";
-  const isEmployee = role === "employee" || (!isOwner && !isManager);
+  const isEmployee = role === "employee";
 
   // Dynamic Navigation Sections based on verified role
   const navSections = [
@@ -280,8 +290,58 @@ export function DashboardLayout({
             </Link>
           </div>
 
-          {/* Center / Store Selector */}
+          {/* Center / Organization & Store Selectors */}
           <div className="hidden md:flex items-center gap-2 relative">
+            {user.organizations && user.organizations.length > 1 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrgDropdownOpen(!orgDropdownOpen);
+                    setStoreDropdownOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E2E8F0] bg-white hover:bg-slate-50 text-xs font-medium text-slate-800 transition-colors shadow-2xs"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[#0F766E]" />
+                  <span className="max-w-[140px] truncate font-semibold">
+                    {organization?.name || "Switch Pharmacy"}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+                {orgDropdownOpen && (
+                  <div className="absolute left-0 mt-1 w-64 bg-white rounded-xl border border-[#E2E8F0] shadow-lg py-1.5 z-40">
+                    <div className="px-3 py-1 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                      Authorized Customer Pharmacies
+                    </div>
+                    <div className="max-h-60 overflow-y-auto">
+                      {user.organizations.map((orgItem) => (
+                        <button
+                          key={orgItem.id}
+                          type="button"
+                          onClick={async () => {
+                            setOrgDropdownOpen(false);
+                            if (orgItem.id !== organization?.id) {
+                              await switchOrganization(orgItem.id);
+                            }
+                          }}
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-teal-50/60 transition-colors ${
+                            orgItem.id === organization?.id
+                              ? "bg-teal-50 text-[#0F766E] font-semibold"
+                              : "text-slate-700"
+                          }`}
+                        >
+                          <span className="truncate">{orgItem.name}</span>
+                          {orgItem.id === organization?.id && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#0F766E] flex-shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {stores.length > 0 ? (
               <div className="relative">
                 <button
@@ -378,7 +438,7 @@ export function DashboardLayout({
                     {user.full_name}
                   </span>
                   <span className="block text-[10px] text-teal-700 font-medium capitalize">
-                    {isOwner ? "Owner" : isManager ? "Store Manager" : "Staff"}
+                    {isOwner ? "Owner" : isManager ? "Store Manager" : isEmployee ? "Staff" : "User"}
                   </span>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
@@ -391,7 +451,7 @@ export function DashboardLayout({
                     <p className="text-[11px] text-slate-500 font-mono truncate">{user.email}</p>
                     <div className="mt-1">
                       <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-[#0F766E] border border-teal-200">
-                        {isOwner ? "Organization Owner" : isManager ? "Store Manager" : "Staff Member"}
+                        {isOwner ? "Organization Owner" : isManager ? "Store Manager" : isEmployee ? "Staff Member" : "Account"}
                       </span>
                     </div>
                   </div>

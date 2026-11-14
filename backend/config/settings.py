@@ -12,7 +12,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-fallback-key-for-local-development-only")
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
-allowed_hosts_raw = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1")
+allowed_hosts_raw = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver,pharmapro.diracai.com,erp.sushrusaeclinic.com,sushrusha.localhost,sushrusha-partner.localhost")
 ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_raw.split(",") if h.strip()]
 
 # Application definition
@@ -36,17 +36,21 @@ INSTALLED_APPS = [
     "apps.inventory.apps.InventoryConfig",
     "apps.billing.apps.BillingConfig",
     "apps.audit.apps.AuditConfig",
+    "apps.platform.apps.PlatformConfig",
+    "apps.partners.apps.PartnersConfig",
 ]
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "apps.organizations.middleware.DomainRoutingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.organizations.middleware.TenantContextMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -149,6 +153,13 @@ default_origins = [
     "http://127.0.0.1:3001",
     "http://localhost:3002",
     "http://127.0.0.1:3002",
+    "http://sushrusha.localhost:3000",
+    "http://sushrusha.localhost:3001",
+    "http://sushrusha.localhost:3100",
+    "http://sushrusha.localhost:3105",
+    "http://sushrusha.localhost:8000",
+    "http://sushrusha-partner.localhost:3000",
+    "http://sushrusha-partner.localhost:8000",
 ]
 
 cors_origins_raw = os.getenv("CORS_ALLOWED_ORIGINS", "")
@@ -159,7 +170,7 @@ else:
     CORS_ALLOWED_ORIGINS = default_origins
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    r"^https?://([a-zA-Z0-9\-_]+\.)?(localhost|127\.0\.0\.1)(:\d+)?$",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -215,3 +226,23 @@ PRODUCT_IMPORT_MAX_FILE_SIZE_BYTES = int(os.getenv("PRODUCT_IMPORT_MAX_FILE_SIZE
 PRODUCT_IMPORT_MAX_ROWS = int(os.getenv("PRODUCT_IMPORT_MAX_ROWS", 5000))
 PRODUCT_IMPORT_BATCH_SIZE = int(os.getenv("PRODUCT_IMPORT_BATCH_SIZE", 250))
 PRODUCT_IMPORT_ALLOWED_GST_RATES = ("0.00", "5.00", "12.00", "18.00", "28.00")
+
+# Multi-tenant domain classification settings
+PLATFORM_DOMAINS = [
+    "pharmapro.diracai.com",
+    "localhost",
+    "127.0.0.1",
+    "testserver",
+]
+
+# Local development preview mapping only.
+CLIENT_DOMAIN_ORGANIZATION_MAP = {
+    "sushrusha.localhost": "sushrusha-pharmacy-store",
+}
+
+PARTNER_DOMAIN_MAP = {
+    "sushrusha-partner.localhost": "sushrusha-eclinic",
+}
+
+USE_X_FORWARDED_HOST = os.getenv("USE_X_FORWARDED_HOST", "False").lower() in ("true", "1")
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

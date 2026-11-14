@@ -63,6 +63,13 @@ export interface StoreInfo {
   organization_logo_url?: string | null;
 }
 
+export type PortalRole =
+  | "PLATFORM_OWNER"
+  | "PARTNER_OWNER"
+  | "PHARMACY_MANAGER"
+  | "PHARMACY_STAFF"
+  | "NONE";
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -70,6 +77,22 @@ export interface UserProfile {
   phone_number?: string;
   is_email_verified: boolean;
   is_staff: boolean;
+  is_superuser?: boolean;
+  is_platform_admin?: boolean;
+  must_change_password?: boolean;
+  portal_role?: PortalRole;
+  active_partner?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url?: string | null;
+  } | null;
+  active_organization?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+  } | null;
   primary_role?: "owner" | "manager" | "employee" | "none";
   created_at: string;
   organizations: OrganizationInfo[];
@@ -78,6 +101,13 @@ export interface UserProfile {
 
 export interface AuthResponse {
   message: string;
+  must_change_password?: boolean;
+  active_organization?: {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+  } | null;
   user: UserProfile;
 }
 

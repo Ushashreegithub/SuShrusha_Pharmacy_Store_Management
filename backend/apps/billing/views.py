@@ -94,12 +94,13 @@ class CustomerListCreateView(APIView):
     permission_classes = [IsAuthenticated, CanAccessBilling]
 
     def _get_organization(self, request, store_id=None):
-        if store_id:
-            store = get_object_or_404(Store.objects.select_related("organization"), id=store_id)
+        target_store_id = store_id or request.query_params.get("store_id")
+        if target_store_id:
+            store = get_object_or_404(Store.objects.select_related("organization"), id=target_store_id)
             self.check_object_permissions(request, store)
             return store.organization
 
-        org = get_user_organization(request.user)
+        org = get_user_organization(request)
         return org
 
     def get(self, request, store_id=None):

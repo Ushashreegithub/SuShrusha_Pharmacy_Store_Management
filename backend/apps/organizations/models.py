@@ -19,7 +19,7 @@ def org_logo_upload_path(instance, filename):
 class Organization(models.Model):
     """
     Pharmacy Business Organization (Tenant root).
-    Created during Owner registration in a database transaction.
+    Created during Owner registration or Partner provisioning in a database transaction.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -28,8 +28,26 @@ class Organization(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="owned_organizations",
     )
+    partner = models.ForeignKey(
+        "partners.Partner",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="customer_organizations",
+    )
+    contact_email = models.EmailField(blank=True)
+    contact_phone = models.CharField(max_length=30, blank=True)
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    license_number = models.CharField(max_length=100, blank=True)
+    gstin = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -160,3 +178,39 @@ class StoreMembership(models.Model):
     def __str__(self):
         return f"{self.user.email} -> {self.store.name} [{self.role}]"
 
+
+
+class OrganizationDomain(models.Model):
+    """
+    Mapping of verified hostnames / custom domains to pharmacy organizations.
+    Enforces strict server-side tenant routing and domain-bound authentication.
+    """
+    DOMAIN_TYPE_CHOICES = [
+        ("platform", "Platform SaaS Domain"),
+        ("client", "Client Dedicated Portal"),
+    ]
+    STATUS_CHOICES = [
+        ("pending", "Pending Verification"),
+        ("active", "Active"),
+        ("suspended", "Suspended"),
+        ("revoked", "Revoked"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="domains"
+    )
+    domain = models.CharField(max_length=255, unique=True, db_index=True)
+    domain_type = models.CharField(max_length=20, choices=DOMAIN_TYPE_CHOICES, default="client")
+    is_verified = models.BooleanField(default=False, db_index=True)
+    is_primary = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending", db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "organization_domains"
+        ordering = ["-is_primary", "-created_at"]
+
+    def __str__(self):
+        return f"{self.domain} -> {self.organization.name} [{self.status}]"

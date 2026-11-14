@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Mail, ShieldCheck } from "lucide-react";
-import { loginApi, ApiError } from "@/lib/api";
+import { loginApi, getCurrentUserApi, ApiError } from "@/lib/api";
 import { UserProfile } from "@/types/auth";
 
 function LoginContent() {
@@ -34,6 +34,63 @@ function LoginContent() {
     }
   }, [emailParam]);
 
+  // If already authenticated, redirect according to role
+  useEffect(() => {
+    let isMounted = true;
+    async function checkAuth() {
+      try {
+        const u = await getCurrentUserApi();
+        if (!isMounted || !u) return;
+
+        if (u.must_change_password) {
+          router.replace("/sushrusha/change-password");
+          return;
+        }
+
+        const isPlatformOwner = Boolean(
+          u.is_platform_admin || (u.is_staff && u.is_superuser)
+        );
+        const isPartnerOwner =
+          u.portal_role === "PARTNER_OWNER" || Boolean(u.active_partner);
+
+        const nextParam = searchParams.get("next");
+
+        if (isPlatformOwner) {
+          if (nextParam && nextParam.startsWith("/platform") && !nextParam.startsWith("//")) {
+            router.replace(nextParam);
+          } else {
+            router.replace("/platform");
+          }
+        } else if (isPartnerOwner) {
+          if (nextParam && nextParam.startsWith("/sushrusha/partner") && !nextParam.startsWith("//")) {
+            router.replace(nextParam);
+          } else {
+            router.replace("/sushrusha/partner");
+          }
+        } else {
+          if (
+            nextParam &&
+            !nextParam.startsWith("/platform") &&
+            !nextParam.startsWith("/sushrusha/partner") &&
+            nextParam.startsWith("/") &&
+            !nextParam.startsWith("//")
+          ) {
+            router.replace(nextParam);
+          } else {
+            router.replace("/dashboard");
+          }
+        }
+      } catch {
+        // Stay on login page
+      }
+    }
+
+    checkAuth();
+    return () => {
+      isMounted = false;
+    };
+  }, [router, searchParams]);
+
   // Status & Validation State
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +100,7 @@ function LoginContent() {
 
   // Development Quick-Fill Utility
   const isDev = process.env.NODE_ENV !== "production";
-  const handleDevPreset = (type: "owner" | "invalid") => {
+  const handleDevPreset = (type: "owner" | "platform_owner" | "partner_owner" | "invalid") => {
     setGeneralError(null);
     setErrors({});
     setLoginSuccess(false);
@@ -51,6 +108,12 @@ function LoginContent() {
     if (type === "owner") {
       setEmail("dr.rajesh@sushrusha.com");
       setPassword("StrongPassword@2026");
+    } else if (type === "platform_owner") {
+      setEmail("admin@diracpharma.com");
+      setPassword("PlatformSuperPass@2026");
+    } else if (type === "partner_owner") {
+      setEmail("janjeevangeneric@gmail.com");
+      setPassword("PartnerOwner@2026!");
     } else if (type === "invalid") {
       setEmail("unknown.user@sushrusha.com");
       setPassword("WrongPassword123");
@@ -91,7 +154,41 @@ function LoginContent() {
 
       setLoginSuccess(true);
       setAuthenticatedUser(res.user);
-      router.push("/dashboard");
+
+      const nextParam = searchParams.get("next");
+      const isPlatformOwner = Boolean(
+        res.user?.is_platform_admin || (res.user?.is_staff && res.user?.is_superuser)
+      );
+      const isPartnerOwner =
+        res.user?.portal_role === "PARTNER_OWNER" || Boolean(res.user?.active_partner);
+
+      if (res.must_change_password || res.user?.must_change_password) {
+        router.push("/sushrusha/change-password");
+      } else if (isPlatformOwner) {
+        if (nextParam && nextParam.startsWith("/platform") && !nextParam.startsWith("//")) {
+          router.push(nextParam);
+        } else {
+          router.push("/platform");
+        }
+      } else if (isPartnerOwner) {
+        if (nextParam && nextParam.startsWith("/sushrusha/partner") && !nextParam.startsWith("//")) {
+          router.push(nextParam);
+        } else {
+          router.push("/sushrusha/partner");
+        }
+      } else {
+        if (
+          nextParam &&
+          !nextParam.startsWith("/platform") &&
+          !nextParam.startsWith("/sushrusha/partner") &&
+          nextParam.startsWith("/") &&
+          !nextParam.startsWith("//")
+        ) {
+          router.push(nextParam);
+        } else {
+          router.push("/dashboard");
+        }
+      }
     } catch (err: any) {
       if (err instanceof ApiError) {
         setGeneralError(
@@ -127,6 +224,20 @@ function LoginContent() {
                 className="px-2 py-0.5 bg-white border border-[#E2E8F0] hover:border-teal-400 hover:bg-teal-50/50 rounded text-[11px] font-medium text-slate-700 transition-colors"
               >
                 Sample Owner
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDevPreset("platform_owner")}
+                className="px-2 py-0.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 rounded text-[11px] font-medium text-indigo-700 transition-colors"
+              >
+                Platform Owner
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDevPreset("partner_owner")}
+                className="px-2 py-0.5 bg-white border border-purple-200 hover:border-purple-400 hover:bg-purple-50/50 rounded text-[11px] font-medium text-purple-700 transition-colors"
+              >
+                Partner Owner
               </button>
               <button
                 type="button"
