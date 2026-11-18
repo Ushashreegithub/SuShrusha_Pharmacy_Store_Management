@@ -254,7 +254,7 @@ function PartnerLayoutContent({
         </div>
 
         <div className="p-4 border-t border-teal-900/70 text-[11px] text-teal-200/70 space-y-1">
-          <p className="font-semibold text-teal-100">Powered by PharmaPro</p>
+
           <p>DiracAI Services SaaS Infrastructure</p>
         </div>
       </aside>

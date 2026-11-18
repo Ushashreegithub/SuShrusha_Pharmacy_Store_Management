@@ -45,7 +45,7 @@ export default function PartnerOverviewPage() {
   return (
     <PartnerLayout
       title="Partner Overview"
-      subtitle="Onboard customer pharmacies, provision stores, and manage customer manager access."
+      subtitle="Onboard customer pharmacies and provision stores"
       actions={
         <div className="flex items-center gap-2">
           <Button
@@ -83,7 +83,7 @@ export default function PartnerOverviewPage() {
       <div className="mb-6 bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-[#0F766E]">
-            <span>{data?.partner?.name || "Sushrusha E-Clinic"} Partner Portal</span>
+            <span>{data?.partner?.name || "Janjeevan Organisation"} Portal</span>
             {data?.partner?.domain && (
               <span className="px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 font-mono text-[11px]">
                 {data.partner.domain}
@@ -91,7 +91,7 @@ export default function PartnerOverviewPage() {
             )}
           </div>
           <p className="text-xs text-slate-600 mt-1">
-            Each customer pharmacy runs in its own isolated tenant organization. Partner governance manages onboarding, store setup, manager credentials, and account status only.
+            Each customer pharmacy runs in its own isolated tenant organization. Manages onboarding, store setup, manager credentials, and account status only.
           </p>
         </div>
         <Link

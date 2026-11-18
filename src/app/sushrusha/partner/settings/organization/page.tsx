@@ -339,7 +339,7 @@ function OrganizationSettingsContent() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold truncate">
-                    {name || profile?.name || "Sushrusha E-Clinic"}
+                    {name || profile?.name || "Janjeevan Org Pvt. Ltd"}
                   </h2>
                   <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30 text-[10px] font-semibold tracking-wider uppercase">
                     Partner Entity
