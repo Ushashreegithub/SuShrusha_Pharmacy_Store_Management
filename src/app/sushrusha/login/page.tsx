@@ -19,8 +19,18 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { SushrushaLogo } from "@/components/sushrusha/SushrushaLogo";
-import { loginApi, ApiError } from "@/lib/api";
+import { loginApi, getCurrentUserApi, ApiError } from "@/lib/api";
 import { UserProfile } from "@/types/auth";
+
+function resolvePostLoginPath(user?: UserProfile | null, mustChangePassword?: boolean): string {
+  if (mustChangePassword || user?.must_change_password) {
+    return "/change-password";
+  }
+  if (user?.portal_role === "PARTNER_OWNER" || Boolean(user?.active_partner)) {
+    return "/sushrusha/partner";
+  }
+  return "/dashboard";
+}
 
 function SushrushaLoginContent() {
   const router = useRouter();
@@ -38,6 +48,25 @@ function SushrushaLoginContent() {
       setEmail(emailParam);
     }
   }, [emailParam]);
+
+  // If already authenticated on this host, route by authoritative server role
+  useEffect(() => {
+    let active = true;
+    async function checkExistingSession() {
+      try {
+        const u = await getCurrentUserApi();
+        if (!active || !u) return;
+        if (u.portal_role === "PLATFORM_OWNER") return;
+        router.replace(resolvePostLoginPath(u, u.must_change_password));
+      } catch {
+        // Stay on login page
+      }
+    }
+    checkExistingSession();
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   // Status & Validation State
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -70,14 +99,14 @@ function SushrushaLoginContent() {
 
     try {
       // Authenticate against existing secure Django session API
-      await loginApi({
+      const res = await loginApi({
         email: email.trim().toLowerCase(),
         password,
         rememberMe,
       });
 
-      // Route to dashboard where server-derived organization and role determine workspace access
-      router.push("/dashboard");
+      const target = resolvePostLoginPath(res.user, res.must_change_password);
+      router.push(target);
     } catch (err: any) {
       if (err instanceof ApiError) {
         setGeneralError(

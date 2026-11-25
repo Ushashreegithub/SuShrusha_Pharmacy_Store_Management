@@ -22,12 +22,19 @@ from apps.organizations.permissions import IsOrganizationOwner
 from apps.organizations.validators import validate_org_logo, safe_delete_logo_file
 
 
-def get_user_organization(user):
-    """Returns active organization where user is owner, or None."""
-    membership = OrganizationMembership.objects.filter(
-        user=user, role="owner", is_active=True
-    ).select_related("organization").first()
-    return membership.organization if membership else None
+def get_user_organization(user_or_request, request=None):
+    """Returns active authoritative organization where user is owner, or None."""
+    from apps.organizations.tenant_context import get_authoritative_organization
+    org = get_authoritative_organization(user_or_request, request=request)
+    if not org:
+        return None
+    user = getattr(user_or_request, "user", user_or_request)
+    if not user or not user.is_authenticated or not user.is_active:
+        return None
+    is_owner = OrganizationMembership.objects.filter(
+        organization=org, user=user, role__in=["owner", "admin"], is_active=True
+    ).exists()
+    return org if is_owner else None
 
 
 class StoreListView(APIView):
@@ -42,10 +49,12 @@ class StoreListView(APIView):
         search_query = request.query_params.get("search", "").strip()
         status_filter = request.query_params.get("status", "").strip()
 
-        # 1. Organization Owner scope
+        # 1. Organization Owner scope (scoped to authoritative active organization)
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
         owner_membership = OrganizationMembership.objects.filter(
-            user=user, role="owner", is_active=True
-        ).first()
+            organization=active_org, user=user, role="owner", is_active=True
+        ).first() if active_org else None
 
         if owner_membership:
             qs = Store.objects.filter(
@@ -63,12 +72,15 @@ class StoreListView(APIView):
             serializer = StoreSerializer(stores, many=True, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # 2. Manager scope (assigned stores)
-        manager_stores = Store.objects.filter(
+        # 2. Manager scope (assigned stores, strictly scoped to active org if resolved)
+        manager_qs = Store.objects.filter(
             memberships__user=user,
             memberships__role="manager",
             memberships__is_active=True,
-        ).distinct().select_related("manager", "organization").prefetch_related("memberships")
+        )
+        if active_org:
+            manager_qs = manager_qs.filter(organization=active_org)
+        manager_stores = manager_qs.distinct().select_related("manager", "organization").prefetch_related("memberships")
 
         if manager_stores.exists():
             qs = manager_stores
@@ -82,10 +94,13 @@ class StoreListView(APIView):
             serializer = StoreSerializer(stores, many=True, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # 3. Employee / Staff scope (assigned memberships)
-        emp_stores = Store.objects.filter(
+        # 3. Employee / Staff scope (assigned memberships, strictly scoped to active org if resolved)
+        emp_qs = Store.objects.filter(
             memberships__user=user
-        ).distinct().select_related("manager", "organization").prefetch_related("memberships")
+        )
+        if active_org:
+            emp_qs = emp_qs.filter(organization=active_org)
+        emp_stores = emp_qs.distinct().select_related("manager", "organization").prefetch_related("memberships")
 
         if search_query:
             emp_stores = emp_stores.filter(
@@ -150,6 +165,14 @@ class StoreDetailView(APIView):
         store = Store.objects.filter(id=store_id).select_related("organization", "manager").first()
         if not store:
             return None, Response({"detail": "Store branch not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and store.organization_id != active_org.id:
+            return None, Response(
+                {"detail": "You do not have permission to access this store branch."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         is_owner = OrganizationMembership.objects.filter(
             organization=store.organization, user=user, role="owner", is_active=True
@@ -978,17 +1001,8 @@ class OrganizationBrandingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        # 1. Check Owner membership
-        org = get_user_organization(user)
-        if not org:
-            # 2. Check store membership
-            membership = StoreMembership.objects.filter(
-                user=user, is_active=True
-            ).select_related("store__organization").first()
-            if membership and membership.store:
-                org = membership.store.organization
-
+        from apps.organizations.tenant_context import get_authoritative_organization
+        org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
         if not org:
             return Response(
                 {"detail": "No active organization found for this user account."},
@@ -1009,8 +1023,11 @@ class OrganizationLogoView(APIView):
 
     def post(self, request):
         user = request.user
-        org = get_user_organization(user)
-        if not org:
+        org = get_user_organization(request)
+        is_owner = OrganizationMembership.objects.filter(
+            organization=org, user=user, role__in=["owner", "admin"], is_active=True
+        ).exists() if org else False
+        if not is_owner:
             return Response(
                 {"detail": "Only organization owners are authorized to manage organization branding."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -1051,8 +1068,11 @@ class OrganizationLogoView(APIView):
 
     def delete(self, request):
         user = request.user
-        org = get_user_organization(user)
-        if not org:
+        org = get_user_organization(request)
+        is_owner = OrganizationMembership.objects.filter(
+            organization=org, user=user, role__in=["owner", "admin"], is_active=True
+        ).exists() if org else False
+        if not is_owner:
             return Response(
                 {"detail": "Only organization owners are authorized to manage organization branding."},
                 status=status.HTTP_403_FORBIDDEN,

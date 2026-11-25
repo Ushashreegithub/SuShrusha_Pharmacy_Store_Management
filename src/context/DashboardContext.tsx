@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useRouter } from "next/navigation";
 import { UserProfile } from "@/types/auth";
 import { Store } from "@/types/dashboard";
-import { getCurrentUserApi, getStoresApi, logoutApi } from "@/lib/api";
+import { getCurrentUserApi, getStoresApi, logoutApi, switchActiveOrganizationApi } from "@/lib/api";
 
 export interface ActiveOrganization {
   id: string;
@@ -20,6 +20,7 @@ interface DashboardContextType {
   activeStore: Store | null;
   activeStoreId: string | null;
   setActiveStoreId: (id: string) => void;
+  switchOrganization: (organizationId: string) => Promise<void>;
   isLoading: boolean;
   refreshStores: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -86,6 +87,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const switchOrganization = async (organizationId: string) => {
+    const res = await switchActiveOrganizationApi(organizationId);
+    setUser(res.user);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("pharmapro_active_store");
+      localStorage.removeItem("sushrusha_active_store");
+    }
+    const storeList = await getStoresApi();
+    setStores(storeList);
+    const firstActive = storeList.find((s) => s.is_active !== false);
+    setActiveStoreIdState(firstActive ? firstActive.id : storeList[0]?.id || null);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -99,24 +113,67 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           router.replace("/login");
           return;
         }
+        if (u.must_change_password) {
+          router.replace("/sushrusha/change-password");
+          return;
+        }
+
+        // If user is a Partner Owner, route exclusively to Partner Administration
+        if (u.portal_role === "PARTNER_OWNER" || Boolean(u.active_partner)) {
+          router.replace("/sushrusha/partner");
+          return;
+        }
+
+        // If user is a pure platform owner without pharmacy tenant membership, route to /platform
+        if (u.is_platform_admin || (u.is_staff && u.is_superuser)) {
+          if (!u.organizations || u.organizations.length === 0) {
+            router.replace("/platform");
+            return;
+          }
+        }
+
+        // If active pharmacy subscription is expired, allow access to overview and subscription page
+        const isCurrentExpired = Boolean(u.active_organization?.subscription?.is_expired);
+        const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+        const isAllowedOnExpired =
+          currentPath === "/dashboard" ||
+          currentPath.startsWith("/dashboard/subscription") ||
+          currentPath === "/subscription-expired";
+
+        if (isCurrentExpired && !isAllowedOnExpired) {
+          router.replace("/subscription-expired");
+          return;
+        }
+
         setUser(u);
 
         // Load stores
-        const storeList = await getStoresApi();
-        if (!isMounted) return;
-        setStores(storeList);
+        try {
+          const storeList = await getStoresApi();
+          if (!isMounted) return;
+          setStores(storeList);
 
-        // Saved active store
-        const savedStoreId =
-          typeof window !== "undefined"
-            ? localStorage.getItem("pharmapro_active_store") ||
-              localStorage.getItem("sushrusha_active_store")
-            : null;
-        if (savedStoreId && storeList.some((s) => s.id === savedStoreId)) {
-          setActiveStoreIdState(savedStoreId);
-        } else {
-          const firstActive = storeList.find((s) => s.is_active !== false);
-          setActiveStoreIdState(firstActive ? firstActive.id : storeList[0]?.id || null);
+          // Saved active store
+          const savedStoreId =
+            typeof window !== "undefined"
+              ? localStorage.getItem("pharmapro_active_store") ||
+                localStorage.getItem("sushrusha_active_store")
+              : null;
+          if (savedStoreId && storeList.some((s) => s.id === savedStoreId)) {
+            setActiveStoreIdState(savedStoreId);
+          } else {
+            const firstActive = storeList.find((s) => s.is_active !== false);
+            setActiveStoreIdState(firstActive ? firstActive.id : storeList[0]?.id || null);
+          }
+        } catch (storeErr: any) {
+          if (storeErr?.code === "SUBSCRIPTION_EXPIRED") {
+            if (!isAllowedOnExpired) {
+              router.replace("/subscription-expired");
+              return;
+            }
+          } else {
+            console.warn("Could not load initial stores:", storeErr);
+          }
         }
       } catch (err) {
         console.error("Dashboard initialization error:", err);
@@ -137,6 +194,16 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const organization: ActiveOrganization | null = React.useMemo(() => {
     if (!user) return null;
+    // 1. Authoritative active organization from server
+    if (user.active_organization) {
+      return {
+        id: user.active_organization.id,
+        name: user.active_organization.name,
+        slug: user.active_organization.slug || "",
+        logo_url: user.active_organization.logo_url || null,
+      };
+    }
+    // 2. Fallbacks
     if (user.organizations && user.organizations.length > 0) {
       const org = user.organizations[0];
       return {
@@ -167,6 +234,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         activeStore,
         activeStoreId,
         setActiveStoreId,
+        switchOrganization,
         isLoading,
         refreshStores,
         refreshUser,

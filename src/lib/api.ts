@@ -8,6 +8,58 @@ import {
   ChangePasswordPayload,
 } from "@/types/auth";
 import {
+  PlatformOverviewMetrics,
+  PlatformOrganizationListItem,
+  PlatformOrganizationDetail,
+  PlatformStatusUpdatePayload,
+  PlatformStatusUpdateResponse,
+  PlatformPaginatedResponse,
+  PlatformOrganizationQueryParams,
+  PlatformUserListItem,
+  PlatformUserDetail,
+  PlatformUserQueryParams,
+  PlatformTemporaryPasswordPayload,
+  PlatformTemporaryPasswordResponse,
+  PlatformRevokeSessionsResponse,
+  PlatformDomainItem,
+  PlatformDomainCreatePayload,
+  PlatformDomainQueryParams,
+  PlatformDomainVerifyPayload,
+  PlatformDomainStatusPayload,
+  PlatformLoginActivityItem,
+  PlatformLoginActivityQueryParams,
+  PlatformAuditItem,
+  PlatformAuditQueryParams,
+  PlatformHostInfo,
+  PlatformRegistrationSettings,
+  PlatformRegistrationSettingsUpdatePayload,
+} from "@/types/platform";
+import {
+  PartnerOverviewResponse,
+  PartnerPharmacyItem,
+  PartnerPharmacyDetailResponse,
+  PartnerStoreItem,
+  PartnerManagerItem,
+  PartnerPaginatedResponse,
+  PartnerCreatePharmacyPayload,
+  PartnerCreatePharmacyResponse,
+  PartnerCreateStorePayload,
+  PartnerCreateManagerPayload,
+  PartnerCreateManagerResponse,
+  PartnerResetPasswordResponse,
+  PartnerOrganizationProfile,
+  PartnerUpdateProfilePayload,
+  PartnerBranding,
+} from "@/types/partner";
+import {
+  PartnerSubscriptionItem,
+  SubscriptionPaymentItem,
+  SubscriptionMetrics,
+  ConfirmManualPaymentPayload,
+  RenewSubscriptionPayload,
+  CustomerSubscriptionResponse,
+} from "@/types/subscription";
+import {
   Store,
   CreateStorePayload,
   UpdateStorePayload,
@@ -30,8 +82,16 @@ export function getApiBaseUrl(): string {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
   }
   if (typeof window !== "undefined") {
-    const host = window.location.hostname || "localhost";
-    return `${window.location.protocol}//${host}:8000/api`;
+    const hostname = window.location.hostname || "localhost";
+    const isLocalhost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.endsWith(".localhost");
+    if (isLocalhost) {
+      return `${window.location.protocol}//${hostname}:8000/api`;
+    }
+    // Production / Staging behind reverse proxy: Same-origin relative /api
+    return "/api";
   }
   return "http://localhost:8000/api";
 }
@@ -2345,4 +2405,536 @@ export async function getCheckoutAttemptStatusApi(
 ): Promise<CheckoutAttempt> {
   return apiFetch<CheckoutAttempt>(`/billing/stores/${storeId}/checkout/${attemptId}/`);
 }
+
+// ==========================================
+// Platform Owner Administration APIs
+// ==========================================
+
+export async function getPlatformOverviewApi(): Promise<PlatformOverviewMetrics> {
+  return apiFetch<PlatformOverviewMetrics>("/platform/overview/");
+}
+
+export async function getPlatformOrganizationsApi(
+  params?: PlatformOrganizationQueryParams
+): Promise<PlatformPaginatedResponse<PlatformOrganizationListItem>> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.status) query.append("status", params.status);
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.page_size) query.append("page_size", params.page_size.toString());
+
+  const queryString = query.toString();
+  const endpoint = `/platform/organizations/${queryString ? `?${queryString}` : ""}`;
+  return apiFetch<PlatformPaginatedResponse<PlatformOrganizationListItem>>(endpoint);
+}
+
+export async function getPlatformOrganizationDetailApi(
+  id: string
+): Promise<PlatformOrganizationDetail> {
+  return apiFetch<PlatformOrganizationDetail>(`/platform/organizations/${id}/`);
+}
+
+export async function updatePlatformOrganizationStatusApi(
+  id: string,
+  payload: PlatformStatusUpdatePayload
+): Promise<PlatformStatusUpdateResponse> {
+  return apiFetch<PlatformStatusUpdateResponse>(`/platform/organizations/${id}/status/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ------------------------------------------
+// Users & Accounts
+// ------------------------------------------
+
+export async function getPlatformUsersApi(
+  params?: PlatformUserQueryParams
+): Promise<PlatformPaginatedResponse<PlatformUserListItem>> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.organization_id) query.append("organization_id", params.organization_id);
+  if (params?.role) query.append("role", params.role);
+  if (params?.status) query.append("status", params.status);
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.page_size) query.append("page_size", params.page_size.toString());
+
+  const queryString = query.toString();
+  const endpoint = `/platform/users/${queryString ? `?${queryString}` : ""}`;
+  return apiFetch<PlatformPaginatedResponse<PlatformUserListItem>>(endpoint);
+}
+
+export async function getPlatformUserDetailApi(
+  id: string
+): Promise<PlatformUserDetail> {
+  return apiFetch<PlatformUserDetail>(`/platform/users/${id}/`);
+}
+
+export async function updatePlatformUserStatusApi(
+  id: string,
+  payload: { is_active: boolean; reason: string }
+): Promise<{ message: string; user_id: string; is_active: boolean; revoked_sessions_count: number }> {
+  return apiFetch(`/platform/users/${id}/status/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function generatePlatformTemporaryPasswordApi(
+  id: string,
+  payload: PlatformTemporaryPasswordPayload
+): Promise<PlatformTemporaryPasswordResponse> {
+  return apiFetch<PlatformTemporaryPasswordResponse>(`/platform/users/${id}/temporary-password/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function revokePlatformUserSessionsApi(
+  id: string,
+  payload?: { reason?: string }
+): Promise<PlatformRevokeSessionsResponse> {
+  return apiFetch<PlatformRevokeSessionsResponse>(`/platform/users/${id}/revoke-sessions/`, {
+    method: "POST",
+    body: JSON.stringify(payload || {}),
+  });
+}
+
+// ------------------------------------------
+// Domain Management
+// ------------------------------------------
+
+export async function getPlatformDomainsApi(
+  params?: PlatformDomainQueryParams
+): Promise<PlatformPaginatedResponse<PlatformDomainItem>> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.organization_id) query.append("organization_id", params.organization_id);
+  if (params?.status) query.append("status", params.status);
+  if (params?.is_verified) query.append("is_verified", params.is_verified);
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.page_size) query.append("page_size", params.page_size.toString());
+
+  const queryString = query.toString();
+  const endpoint = `/platform/domains/${queryString ? `?${queryString}` : ""}`;
+  return apiFetch<PlatformPaginatedResponse<PlatformDomainItem>>(endpoint);
+}
+
+export async function createPlatformDomainApi(
+  payload: PlatformDomainCreatePayload
+): Promise<PlatformDomainItem> {
+  return apiFetch<PlatformDomainItem>("/platform/domains/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPlatformDomainDetailApi(
+  id: string
+): Promise<PlatformDomainItem> {
+  return apiFetch<PlatformDomainItem>(`/platform/domains/${id}/`);
+}
+
+export async function deletePlatformDomainApi(
+  id: string,
+  reason?: string
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/platform/domains/${id}/`, {
+    method: "DELETE",
+    body: JSON.stringify({ reason: reason || "Administrator deletion" }),
+  });
+}
+
+export async function verifyPlatformDomainApi(
+  id: string,
+  payload: PlatformDomainVerifyPayload
+): Promise<{ message: string; domain: PlatformDomainItem }> {
+  return apiFetch<{ message: string; domain: PlatformDomainItem }>(`/platform/domains/${id}/verify/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePlatformDomainStatusApi(
+  id: string,
+  payload: PlatformDomainStatusPayload
+): Promise<{ message: string; domain: PlatformDomainItem }> {
+  return apiFetch<{ message: string; domain: PlatformDomainItem }>(`/platform/domains/${id}/status/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ------------------------------------------
+// Login Activity
+// ------------------------------------------
+
+export async function getPlatformLoginActivityApi(
+  params?: PlatformLoginActivityQueryParams
+): Promise<PlatformPaginatedResponse<PlatformLoginActivityItem>> {
+  const query = new URLSearchParams();
+  if (params?.email) query.append("email", params.email);
+  if (params?.organization_id) query.append("organization_id", params.organization_id);
+  if (params?.status) query.append("status", params.status);
+  if (params?.start_date) query.append("start_date", params.start_date);
+  if (params?.end_date) query.append("end_date", params.end_date);
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.page_size) query.append("page_size", params.page_size.toString());
+
+  const queryString = query.toString();
+  const endpoint = `/platform/login-activity/${queryString ? `?${queryString}` : ""}`;
+  return apiFetch<PlatformPaginatedResponse<PlatformLoginActivityItem>>(endpoint);
+}
+
+// ------------------------------------------
+// Security & Audit
+// ------------------------------------------
+
+export async function getPlatformAuditApi(
+  params?: PlatformAuditQueryParams
+): Promise<PlatformPaginatedResponse<PlatformAuditItem>> {
+  const query = new URLSearchParams();
+  if (params?.event_type) query.append("event_type", params.event_type);
+  if (params?.organization_id) query.append("organization_id", params.organization_id);
+  if (params?.actor_email) query.append("actor_email", params.actor_email);
+  if (params?.start_date) query.append("start_date", params.start_date);
+  if (params?.end_date) query.append("end_date", params.end_date);
+  if (params?.target_account) query.append("target_account", params.target_account);
+  if (params?.page) query.append("page", params.page.toString());
+  if (params?.page_size) query.append("page_size", params.page_size.toString());
+
+  const queryString = query.toString();
+  const endpoint = `/platform/audit/${queryString ? `?${queryString}` : ""}`;
+  return apiFetch<PlatformPaginatedResponse<PlatformAuditItem>>(endpoint);
+}
+
+// ------------------------------------------
+// Host Info & Registration Settings
+// ------------------------------------------
+
+export async function getPublicRegistrationStatusApi(): Promise<{
+  public_registration_enabled: boolean;
+}> {
+  return apiFetch<{ public_registration_enabled: boolean }>("/auth/registration-status/");
+}
+
+export async function getPlatformHostInfoApi(): Promise<PlatformHostInfo> {
+  return apiFetch<PlatformHostInfo>("/platform/host-info/");
+}
+
+export async function getPlatformRegistrationSettingsApi(): Promise<PlatformRegistrationSettings> {
+  return apiFetch<PlatformRegistrationSettings>("/platform/registration-settings/");
+}
+
+export async function updatePlatformRegistrationSettingsApi(
+  payload: PlatformRegistrationSettingsUpdatePayload
+): Promise<PlatformRegistrationSettings> {
+  return apiFetch<PlatformRegistrationSettings>("/platform/registration-settings/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ------------------------------------------
+// Auth Organization Switch (Multi-Org Customer Users)
+// ------------------------------------------
+
+export async function switchActiveOrganizationApi(organizationId: string): Promise<{
+  message: string;
+  user: UserProfile;
+}> {
+  return apiFetch<{ message: string; user: UserProfile }>("/auth/switch-organization/", {
+    method: "POST",
+    body: JSON.stringify({ organization_id: organizationId }),
+  });
+}
+
+// ------------------------------------------
+// Sushrusha Partner Administration APIs
+// ------------------------------------------
+
+export async function getPartnerOverviewApi(): Promise<PartnerOverviewResponse> {
+  return apiFetch<PartnerOverviewResponse>("/partner/overview/");
+}
+
+export async function getPartnerPharmaciesApi(params?: {
+  search?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PartnerPaginatedResponse<PartnerPharmacyItem>> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.status) query.append("status", params.status);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+  const qs = query.toString();
+  return apiFetch<PartnerPaginatedResponse<PartnerPharmacyItem>>(
+    `/partner/pharmacies/${qs ? `?${qs}` : ""}`
+  );
+}
+
+export async function createPartnerPharmacyApi(
+  payload: PartnerCreatePharmacyPayload
+): Promise<PartnerCreatePharmacyResponse> {
+  return apiFetch<PartnerCreatePharmacyResponse>("/partner/pharmacies/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPartnerPharmacyDetailApi(
+  orgId: string
+): Promise<PartnerPharmacyDetailResponse> {
+  return apiFetch<PartnerPharmacyDetailResponse>(`/partner/pharmacies/${orgId}/`);
+}
+
+export async function updatePartnerPharmacyApi(
+  orgId: string,
+  payload: Partial<PartnerCreatePharmacyPayload>
+): Promise<{ message: string; pharmacy: PartnerPharmacyItem }> {
+  return apiFetch<{ message: string; pharmacy: PartnerPharmacyItem }>(
+    `/partner/pharmacies/${orgId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function updatePartnerPharmacyStatusApi(
+  orgId: string,
+  payload: { is_active: boolean; reason: string }
+): Promise<{
+  message: string;
+  organization_id: string;
+  is_active: boolean;
+  revoked_sessions_count: number;
+}> {
+  return apiFetch(`/partner/pharmacies/${orgId}/status/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPartnerStoresApi(params?: {
+  organization_id?: string;
+  status?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PartnerPaginatedResponse<PartnerStoreItem>> {
+  const query = new URLSearchParams();
+  if (params?.organization_id) query.append("organization_id", params.organization_id);
+  if (params?.status) query.append("status", params.status);
+  if (params?.search) query.append("search", params.search);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+  const qs = query.toString();
+  return apiFetch<PartnerPaginatedResponse<PartnerStoreItem>>(
+    `/partner/stores/${qs ? `?${qs}` : ""}`
+  );
+}
+
+export async function createPartnerStoreApi(
+  payload: PartnerCreateStorePayload
+): Promise<{ message: string; store: PartnerStoreItem }> {
+  return apiFetch<{ message: string; store: PartnerStoreItem }>("/partner/stores/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePartnerStoreStatusApi(
+  storeId: string,
+  payload: { status: "setup" | "active" | "inactive"; reason?: string }
+): Promise<{ message: string; store: PartnerStoreItem }> {
+  return apiFetch<{ message: string; store: PartnerStoreItem }>(
+    `/partner/stores/${storeId}/status/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function getPartnerManagersApi(params?: {
+  organization_id?: string;
+  status?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PartnerPaginatedResponse<PartnerManagerItem>> {
+  const query = new URLSearchParams();
+  if (params?.organization_id) query.append("organization_id", params.organization_id);
+  if (params?.status) query.append("status", params.status);
+  if (params?.search) query.append("search", params.search);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+  const qs = query.toString();
+  return apiFetch<PartnerPaginatedResponse<PartnerManagerItem>>(
+    `/partner/managers/${qs ? `?${qs}` : ""}`
+  );
+}
+
+export async function createPartnerManagerApi(
+  payload: PartnerCreateManagerPayload
+): Promise<PartnerCreateManagerResponse> {
+  return apiFetch<PartnerCreateManagerResponse>("/partner/managers/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function assignPartnerManagerStoresApi(
+  userId: string,
+  payload: { organization_id: string; store_ids: string[] }
+): Promise<{ message: string; manager: PartnerManagerItem }> {
+  return apiFetch<{ message: string; manager: PartnerManagerItem }>(
+    `/partner/managers/${userId}/assign-stores/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function resetPartnerManagerPasswordApi(
+  userId: string,
+  payload: { reason: string }
+): Promise<PartnerResetPasswordResponse> {
+  return apiFetch<PartnerResetPasswordResponse>(
+    `/partner/managers/${userId}/reset-password/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function updatePartnerManagerStatusApi(
+  userId: string,
+  payload: { is_active: boolean; reason: string }
+): Promise<{
+  message: string;
+  user_id: string;
+  is_active: boolean;
+  revoked_sessions_count: number;
+  manager: PartnerManagerItem;
+}> {
+  return apiFetch(`/partner/managers/${userId}/status/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPartnerOrganizationProfileApi(): Promise<PartnerOrganizationProfile> {
+  return apiFetch<PartnerOrganizationProfile>("/partner/profile/");
+}
+
+export async function updatePartnerOrganizationProfileApi(
+  payload: PartnerUpdateProfilePayload
+): Promise<PartnerOrganizationProfile> {
+  return apiFetch<PartnerOrganizationProfile>("/partner/profile/", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function uploadPartnerLogoApi(
+  file: File
+): Promise<{ message: string; logo_url: string }> {
+  const formData = new FormData();
+  formData.append("logo", file);
+  return apiFetch<{ message: string; logo_url: string }>("/partner/profile/logo/", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function removePartnerLogoApi(): Promise<{
+  message: string;
+  logo_url: null;
+}> {
+  return apiFetch<{ message: string; logo_url: null }>("/partner/profile/logo/", {
+    method: "DELETE",
+  });
+}
+
+export async function getPartnerBrandingApi(): Promise<PartnerBranding> {
+  return apiFetch<PartnerBranding>("/partner/branding/");
+}
+
+// -----------------------------------------------------------------------------
+// Partner Subscription Management API Methods
+// -----------------------------------------------------------------------------
+
+export async function getPartnerSubscriptionsApi(params?: {
+  search?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PartnerPaginatedResponse<PartnerSubscriptionItem>> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.status && params.status !== "all") query.append("status", params.status);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+
+  const qStr = query.toString();
+  return apiFetch<PartnerPaginatedResponse<PartnerSubscriptionItem>>(
+    `/partner/subscriptions/${qStr ? `?${qStr}` : ""}`
+  );
+}
+
+export async function getPartnerSubscriptionDetailApi(
+  subscriptionId: number
+): Promise<PartnerSubscriptionItem> {
+  return apiFetch<PartnerSubscriptionItem>(`/partner/subscriptions/${subscriptionId}/`);
+}
+
+export async function getPartnerSubscriptionMetricsApi(): Promise<SubscriptionMetrics> {
+  return apiFetch<SubscriptionMetrics>("/partner/subscriptions/metrics/");
+}
+
+export async function confirmSubscriptionPaymentApi(
+  subscriptionId: number,
+  payload: ConfirmManualPaymentPayload
+): Promise<{
+  message: string;
+  subscription: PartnerSubscriptionItem;
+  payment: SubscriptionPaymentItem;
+}> {
+  return apiFetch(`/partner/subscriptions/${subscriptionId}/confirm-payment/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function renewSubscriptionApi(
+  subscriptionId: number,
+  payload: RenewSubscriptionPayload
+): Promise<{
+  message: string;
+  subscription: PartnerSubscriptionItem;
+  payment: SubscriptionPaymentItem;
+}> {
+  return apiFetch(`/partner/subscriptions/${subscriptionId}/renew/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Pharmacy Customer Subscription API Methods
+// -----------------------------------------------------------------------------
+
+export async function getCustomerSubscriptionApi(): Promise<CustomerSubscriptionResponse> {
+  return apiFetch<CustomerSubscriptionResponse>("/subscriptions/my-subscription/");
+}
+
+
+
+
+
 

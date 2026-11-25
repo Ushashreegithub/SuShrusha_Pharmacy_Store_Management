@@ -34,10 +34,15 @@ def is_user_store_member(user, store):
     """
     Checks if user has active store membership (Manager, Pharmacist, Cashier, Staff)
     or is an active owner of the store's active organization.
+    Enforces that store belongs to the authoritative active organization.
     """
     if not user or not user.is_authenticated or not user.is_active:
         return False
     if store and store.organization and not store.organization.is_active:
+        return False
+    from apps.organizations.tenant_context import get_authoritative_organization
+    active_org = get_authoritative_organization(user)
+    if active_org and store.organization_id != active_org.id:
         return False
     # 1. Organization Owner has tenant-wide access to all stores in the organization
     if is_user_org_owner(user, store.organization):
@@ -83,6 +88,10 @@ class CanPostStoreOpeningStock(permissions.BasePermission):
         store = obj if hasattr(obj, "organization") and hasattr(obj, "code") else getattr(obj, "store", None)
         if not store:
             return False
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and store.organization_id != active_org.id:
+            return False
         return is_user_org_owner(request.user, store.organization) or is_user_assigned_store_manager(request.user, store)
 
 
@@ -104,21 +113,12 @@ class CanViewStoreStock(permissions.BasePermission):
         return is_user_store_member(request.user, store)
 
 
-def get_user_organization(user):
-    """Resolves the caller's active Organization from memberships."""
-    if not user or not user.is_authenticated or not user.is_active:
-        return None
-    org_membership = OrganizationMembership.objects.filter(
-        user=user, is_active=True
-    ).select_related("organization").first()
-    if org_membership and org_membership.organization.is_active:
-        return org_membership.organization
-    store_membership = StoreMembership.objects.filter(
-        user=user, is_active=True
-    ).select_related("store__organization").first()
-    if store_membership and store_membership.store.organization.is_active:
-        return store_membership.store.organization
-    return None
+def get_user_organization(user_or_request, request=None):
+    """
+    Authoritative, domain-aware tenant context resolver.
+    """
+    from apps.organizations.tenant_context import get_authoritative_organization
+    return get_authoritative_organization(user_or_request, request=request)
 
 
 class CanManageSuppliers(permissions.BasePermission):
@@ -203,6 +203,11 @@ class CanManageTransfers(permissions.BasePermission):
         if not org or not org.is_active:
             return False
 
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and org.id != active_org.id:
+            return False
+
         if is_user_org_owner(request.user, org):
             return True
 
@@ -227,6 +232,10 @@ class CanManageAdjustments(permissions.BasePermission):
             return False
         org = store.organization
         if not org or not org.is_active:
+            return False
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and org.id != active_org.id:
             return False
         if is_user_org_owner(request.user, org):
             return True
@@ -253,6 +262,10 @@ class CanManageStockCounts(permissions.BasePermission):
             return False
         org = store.organization
         if not org or not org.is_active:
+            return False
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and org.id != active_org.id:
             return False
         if is_user_org_owner(request.user, org):
             return True
@@ -282,6 +295,10 @@ class CanManageQuarantine(permissions.BasePermission):
         org = store.organization
         if not org or not org.is_active:
             return False
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and org.id != active_org.id:
+            return False
         if is_user_org_owner(request.user, org):
             return True
         return is_user_store_member(request.user, store)
@@ -304,6 +321,10 @@ class CanManageRecalls(permissions.BasePermission):
         if not org:
             return False
         if not org.is_active:
+            return False
+        from apps.organizations.tenant_context import get_authoritative_organization
+        active_org = getattr(request, "active_organization", None) or get_authoritative_organization(request)
+        if active_org and org.id != active_org.id:
             return False
         # Organization Owners have full recall administration
         if is_user_org_owner(request.user, org):
