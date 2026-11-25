@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from apps.partners.views import (
     PartnerOverviewView,
     PartnerPharmacyListCreateView,
@@ -21,6 +21,7 @@ urlpatterns = [
     path("profile/", PartnerOrganizationProfileView.as_view(), name="partner-organization-profile"),
     path("profile/logo/", PartnerLogoUploadView.as_view(), name="partner-organization-logo"),
     path("branding/", PartnerBrandingView.as_view(), name="partner-branding"),
+    path("subscriptions/", include("apps.subscriptions.urls")),
     path("pharmacies/", PartnerPharmacyListCreateView.as_view(), name="partner-pharmacies-list-create"),
     path("pharmacies/<uuid:org_id>/", PartnerPharmacyDetailView.as_view(), name="partner-pharmacies-detail"),
     path("pharmacies/<uuid:org_id>/status/", PartnerPharmacyStatusView.as_view(), name="partner-pharmacies-status"),

@@ -18,6 +18,22 @@ def normalize_host(host_string: str | None) -> str:
     return host.rstrip(".")
 
 
+def is_local_dev(request=None) -> bool:
+    """
+    Returns True if running in local development mode (DEBUG=True or test suite).
+    If a request is provided, also checks that the normalized host is a local host
+    (localhost, 127.0.0.1, testserver, or *.localhost).
+    """
+    is_debug_or_test = bool(getattr(settings, "DEBUG", False) or "test" in sys.argv)
+    if not is_debug_or_test:
+        return False
+    if request:
+        raw_host = request.get_host() if hasattr(request, "get_host") else str(request)
+        host = normalize_host(raw_host)
+        return host in ("localhost", "127.0.0.1", "testserver") or host.endswith(".localhost")
+    return True
+
+
 def get_platform_domains() -> set[str]:
     """
     Returns configured platform domains (PharmaPro SaaS platform).

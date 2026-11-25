@@ -32,6 +32,7 @@ import {
   Truck,
   Layers,
   Receipt,
+  CreditCard,
 } from "lucide-react";
 import { Logo } from "@/components/auth/Logo";
 import { StatusBadge } from "@/components/auth/StatusBadge";
@@ -215,6 +216,13 @@ export function DashboardLayout({
           icon: ShieldCheck,
           active: pathname === "/dashboard/roles",
           visible: isOwner,
+        },
+        {
+          label: "Subscription & Plan",
+          href: "/dashboard/subscription",
+          icon: CreditCard,
+          active: pathname.startsWith("/dashboard/subscription"),
+          visible: isOwner || isManager,
         },
         {
           label: "Organization Settings",

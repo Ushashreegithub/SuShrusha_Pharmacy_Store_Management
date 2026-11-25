@@ -132,24 +132,48 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        // If active pharmacy subscription is expired, allow access to overview and subscription page
+        const isCurrentExpired = Boolean(u.active_organization?.subscription?.is_expired);
+        const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+        const isAllowedOnExpired =
+          currentPath === "/dashboard" ||
+          currentPath.startsWith("/dashboard/subscription") ||
+          currentPath === "/subscription-expired";
+
+        if (isCurrentExpired && !isAllowedOnExpired) {
+          router.replace("/subscription-expired");
+          return;
+        }
+
         setUser(u);
 
         // Load stores
-        const storeList = await getStoresApi();
-        if (!isMounted) return;
-        setStores(storeList);
+        try {
+          const storeList = await getStoresApi();
+          if (!isMounted) return;
+          setStores(storeList);
 
-        // Saved active store
-        const savedStoreId =
-          typeof window !== "undefined"
-            ? localStorage.getItem("pharmapro_active_store") ||
-              localStorage.getItem("sushrusha_active_store")
-            : null;
-        if (savedStoreId && storeList.some((s) => s.id === savedStoreId)) {
-          setActiveStoreIdState(savedStoreId);
-        } else {
-          const firstActive = storeList.find((s) => s.is_active !== false);
-          setActiveStoreIdState(firstActive ? firstActive.id : storeList[0]?.id || null);
+          // Saved active store
+          const savedStoreId =
+            typeof window !== "undefined"
+              ? localStorage.getItem("pharmapro_active_store") ||
+                localStorage.getItem("sushrusha_active_store")
+              : null;
+          if (savedStoreId && storeList.some((s) => s.id === savedStoreId)) {
+            setActiveStoreIdState(savedStoreId);
+          } else {
+            const firstActive = storeList.find((s) => s.is_active !== false);
+            setActiveStoreIdState(firstActive ? firstActive.id : storeList[0]?.id || null);
+          }
+        } catch (storeErr: any) {
+          if (storeErr?.code === "SUBSCRIPTION_EXPIRED") {
+            if (!isAllowedOnExpired) {
+              router.replace("/subscription-expired");
+              return;
+            }
+          } else {
+            console.warn("Could not load initial stores:", storeErr);
+          }
         }
       } catch (err) {
         console.error("Dashboard initialization error:", err);

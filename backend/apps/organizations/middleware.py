@@ -51,10 +51,18 @@ class DomainRoutingMiddleware:
         # Partner API boundary check: partner endpoints are restricted to active partner hosts
         if request.path.startswith("/api/partner/"):
             if category != "partner":
-                return JsonResponse(
-                    {"detail": "Partner administration endpoints are restricted to authorized partner domains."},
-                    status=403,
-                )
+                from apps.organizations.domain_routing import is_local_dev
+                if is_local_dev(request):
+                    # In local development preview (localhost / 127.0.0.1 / testserver),
+                    # allow requests to pass to SessionMiddleware, AuthenticationMiddleware,
+                    # and TenantContextMiddleware where PartnerMembership and partner_owner role
+                    # are strictly validated.
+                    pass
+                else:
+                    return JsonResponse(
+                        {"detail": "Partner administration endpoints are restricted to authorized partner domains."},
+                        status=403,
+                    )
 
         return self.get_response(request)
 
@@ -90,6 +98,15 @@ class TenantContextMiddleware:
             request.active_organization = get_authoritative_organization(request)
             request.active_partner = get_authoritative_partner(request)
 
+            # In local development preview (localhost / 127.0.0.1 / testserver),
+            # ensure partner context is bound for partner administration APIs
+            from apps.organizations.domain_routing import is_local_dev
+            if is_local_dev(request):
+                if request.active_partner and not getattr(request, "bound_partner", None):
+                    request.bound_partner = request.active_partner
+                if request.path.startswith("/api/partner/") and getattr(request, "bound_partner", None):
+                    request.domain_category = "partner"
+
             if request.user and request.user.is_authenticated:
                 # 1. Enforce password change requirement
                 if getattr(request.user, "must_change_password", False):
@@ -101,6 +118,41 @@ class TenantContextMiddleware:
                             },
                             status=403,
                         )
+
+                # 2. Centralized Subscription Expiry Enforcement for Janjeevan Partner Pharmacies
+                active_org = request.active_organization
+                if active_org and active_org.partner_id and request.path.startswith(self.OPERATIONAL_API_PREFIXES):
+                    from apps.subscriptions.services import is_janjeevan_partner
+                    if is_janjeevan_partner(active_org.partner_id):
+                        sub = getattr(active_org, "subscription", None)
+                        if sub is None:
+                            from apps.subscriptions.models import OrganizationSubscription
+                            sub = OrganizationSubscription.objects.filter(organization=active_org).first()
+                        if sub:
+                            from django.utils import timezone
+                            now = timezone.now()
+                            is_expired = (
+                                sub.status == "expired"
+                                or (
+                                    sub.status in ("active", "trialing")
+                                    and sub.current_period_end is not None
+                                    and sub.current_period_end < now
+                                )
+                            )
+                            if is_expired:
+                                if sub.status != "expired":
+                                    sub.status = "expired"
+                                    sub.save(update_fields=["status", "updated_at"])
+                                return JsonResponse(
+                                    {
+                                        "detail": "Your pharmacy subscription has expired. Please contact Janjeevan support or your administrator to renew.",
+                                        "code": "SUBSCRIPTION_EXPIRED",
+                                        "organization_id": str(active_org.id),
+                                        "organization_name": active_org.name,
+                                        "expired_at": sub.current_period_end.isoformat() if sub.current_period_end else None,
+                                    },
+                                    status=403,
+                                )
 
                 category = getattr(request, "domain_category", None)
 

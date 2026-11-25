@@ -92,6 +92,12 @@ export interface UserProfile {
     name: string;
     slug: string;
     logo_url: string | null;
+    subscription?: {
+      status: string;
+      is_expired: boolean;
+      is_valid: boolean;
+      current_period_end: string | null;
+    } | null;
   } | null;
   primary_role?: "owner" | "manager" | "employee" | "none";
   created_at: string;
@@ -107,6 +113,12 @@ export interface AuthResponse {
     name: string;
     slug: string;
     logo_url: string | null;
+    subscription?: {
+      status: string;
+      is_expired: boolean;
+      is_valid: boolean;
+      current_period_end: string | null;
+    } | null;
   } | null;
   user: UserProfile;
 }

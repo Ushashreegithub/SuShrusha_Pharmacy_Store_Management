@@ -34,6 +34,10 @@ class IsPartnerOwner(permissions.BasePermission):
         if not bound_partner or not bound_partner.is_active:
             return False
 
+        # Ensure request.bound_partner is attached for view access
+        if not getattr(request, "bound_partner", None):
+            request.bound_partner = bound_partner
+
         return PartnerMembership.objects.filter(
             partner=bound_partner,
             user=user,

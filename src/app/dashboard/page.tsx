@@ -19,18 +19,23 @@ import {
   MapPin,
   RefreshCw,
   ExternalLink,
+  ShieldAlert,
+  Info,
+  CreditCard,
 } from "lucide-react";
 import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { StatusBadge } from "@/components/auth/StatusBadge";
 import { Button } from "@/components/ui/Button";
-import { getOrganizationOverviewApi } from "@/lib/api";
+import { getOrganizationOverviewApi, getCustomerSubscriptionApi } from "@/lib/api";
 import { OrganizationOverview } from "@/types/dashboard";
+import { CustomerSubscriptionResponse } from "@/types/subscription";
 
 function DashboardOverviewContent() {
   const router = useRouter();
   const { user, stores, activeStore, setActiveStoreId } = useDashboard();
   const [overview, setOverview] = useState<OrganizationOverview | null>(null);
+  const [subscription, setSubscription] = useState<CustomerSubscriptionResponse | null>(null);
   const [isLoadingOverview, setIsLoadingOverview] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -47,17 +52,271 @@ function DashboardOverviewContent() {
       const data = await getOrganizationOverviewApi();
       setOverview(data);
     } catch (err: any) {
-      setLoadError(err?.message || "Failed to load organization overview metrics.");
+      if (err?.code === "SUBSCRIPTION_EXPIRED") {
+        // Operational metrics paused due to expired subscription
+      } else {
+        setLoadError(err?.message || "Failed to load organization overview metrics.");
+      }
     } finally {
       setIsLoadingOverview(false);
     }
   };
 
+  const fetchSubscription = async () => {
+    try {
+      const sub = await getCustomerSubscriptionApi();
+      setSubscription(sub);
+    } catch {
+      // Unmanaged or direct organization gracefully handled
+    }
+  };
+
   useEffect(() => {
+    fetchSubscription();
     if (isOwner) {
       fetchOverview();
     }
   }, [isOwner]);
+
+  const renderSubscriptionBanner = () => {
+    if (!subscription || !subscription.has_subscription || !subscription.is_managed_by_partner) {
+      return null;
+    }
+
+    const formatDate = (dateStr?: string | null) => {
+      if (!dateStr) return "N/A";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+      } catch {
+        return dateStr;
+      }
+    };
+
+    if (subscription.is_grandfathered || subscription.status === "grandfathered") {
+      return (
+        <div className="mb-6 p-4 rounded-2xl border border-teal-200 bg-teal-50/70 text-teal-900 flex items-center justify-between gap-4 text-xs shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-teal-100 text-[#0F766E] flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold text-teal-950">Grandfathered Permanent License</span>
+              <p className="text-teal-800 text-[11px]">
+                This organization is exempt from subscription expiry and recurring fees under Janjeevan Partner Administration.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="text-xs font-semibold text-[#0F766E] hover:underline flex items-center gap-1 shrink-0"
+          >
+            <span>View Plan</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      );
+    }
+
+    if (subscription.is_expired || subscription.effective_status === "expired") {
+      return (
+        <div className="mb-6 p-5 rounded-2xl border border-rose-300 bg-rose-50 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 text-rose-700 flex items-center justify-center shrink-0">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-rose-950">
+                PharmaPro Subscription Expired on {formatDate(subscription.current_period_end)}
+              </h3>
+              <p className="text-xs text-rose-800 leading-relaxed max-w-2xl">
+                Operational tools (Billing, Stock Transfers, Adjustments) are temporarily paused. Your pharmacy data is securely preserved. Please contact Janjeevan Organisation to confirm payment and renew validity.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="shrink-0 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition shadow-xs flex items-center gap-1.5"
+          >
+            <span>View Subscription & Support</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      );
+    }
+
+    const days = subscription.days_remaining;
+    if (days === null || days === undefined) {
+      if (subscription.status === "not_started") {
+        return (
+          <div className="mb-6 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-900 flex items-center justify-between gap-4 text-xs shadow-2xs">
+            <div className="flex items-center gap-3">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Subscription Setup:</strong> Your 365-day initial license will start upon pharmacy owner login.
+              </span>
+            </div>
+            <Link
+              href="/dashboard/subscription"
+              className="font-semibold text-amber-800 hover:underline flex items-center gap-1 shrink-0"
+            >
+              <span>View Details</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        );
+      }
+      return null;
+    }
+
+    // Reminders based on thresholds: <= 1, <= 3, <= 7, <= 15, <= 30
+    if (days <= 1) {
+      return (
+        <div className="mb-6 p-5 rounded-2xl border border-rose-300 bg-rose-50 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 text-rose-700 flex items-center justify-center shrink-0">
+              <ShieldAlert className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-rose-950">
+                Urgent Renewal Required: Subscription Expires in {days} Day!
+              </h3>
+              <p className="text-xs text-rose-800 leading-relaxed max-w-2xl">
+                Your PharmaPro subscription expires on <strong>{formatDate(subscription.current_period_end)}</strong>. You have <strong>{days} day remaining</strong>. Please contact your Janjeevan Partner Owner to arrange renewal payment before expiry to avoid interruption of pharmacy operations.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="shrink-0 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl transition shadow-xs flex items-center gap-1.5"
+          >
+            <span>Renew with Partner</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      );
+    }
+
+    if (days <= 3) {
+      return (
+        <div className="mb-6 p-4 sm:p-5 rounded-2xl border border-orange-300 bg-orange-50 text-orange-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-orange-100 border border-orange-200 text-orange-700 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-orange-950">
+                Renewal Approaching: {days} Days Remaining
+              </h3>
+              <p className="text-xs text-orange-800 leading-relaxed max-w-2xl">
+                Your PharmaPro subscription expires on <strong>{formatDate(subscription.current_period_end)}</strong>. You have <strong>{days} days remaining</strong>. Please contact your Janjeevan Partner Owner to arrange renewal payment before expiry to avoid interruption of pharmacy operations.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="shrink-0 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold text-xs rounded-xl transition shadow-xs flex items-center gap-1.5"
+          >
+            <span>Arrange Renewal</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      );
+    }
+
+    if (days <= 7) {
+      return (
+        <div className="mb-6 p-4 rounded-2xl border border-amber-300 bg-amber-50 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-amber-950">
+                Subscription Renewal Notice: {days} Days Remaining
+              </h3>
+              <p className="text-xs text-amber-800 leading-relaxed max-w-2xl">
+                Your PharmaPro subscription expires on <strong>{formatDate(subscription.current_period_end)}</strong>. You have <strong>{days} days remaining</strong>. Please contact your Janjeevan Partner Owner to arrange renewal payment before expiry to avoid interruption of pharmacy operations.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="shrink-0 px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white font-semibold text-xs rounded-xl transition flex items-center gap-1.5"
+          >
+            <span>View Subscription</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      );
+    }
+
+    if (days <= 15) {
+      return (
+        <div className="mb-6 p-4 rounded-2xl border border-amber-200 bg-amber-50/80 text-amber-950 flex items-center justify-between gap-4 text-xs shadow-2xs">
+          <div className="flex items-center gap-3">
+            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Upcoming Renewal:</strong> Your PharmaPro subscription expires on <strong>{formatDate(subscription.current_period_end)}</strong> ({days} days remaining). Please plan your renewal with Janjeevan Organisation.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="font-semibold text-amber-800 hover:underline flex items-center gap-1 shrink-0"
+          >
+            <span>Details</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      );
+    }
+
+    if (days <= 30) {
+      return (
+        <div className="mb-6 p-4 rounded-2xl border border-sky-200 bg-sky-50/80 text-sky-950 flex items-center justify-between gap-4 text-xs shadow-2xs">
+          <div className="flex items-center gap-3">
+            <Info className="w-4 h-4 text-sky-600 shrink-0" />
+            <span>
+              <strong>Renewal Notice:</strong> Your PharmaPro subscription expires on <strong>{formatDate(subscription.current_period_end)}</strong> ({days} days remaining). Contact Janjeevan Partner Owner to arrange annual renewal.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="font-semibold text-sky-800 hover:underline flex items-center gap-1 shrink-0"
+          >
+            <span>Details</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      );
+    }
+
+    // Days > 30 and trialing: Show discreet trial info
+    if (subscription.status === "trialing") {
+      return (
+        <div className="mb-6 p-3.5 rounded-2xl border border-blue-100 bg-blue-50/50 text-blue-900 flex items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span>
+              <strong>365-Day Initial Trial Active:</strong> {days} days remaining until {formatDate(subscription.current_period_end)}.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/subscription"
+            className="font-semibold text-blue-700 hover:underline flex items-center gap-1 shrink-0 text-[11px]"
+          >
+            <span>Subscription & Plan</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <DashboardLayout
@@ -98,6 +357,9 @@ function DashboardOverviewContent() {
         ) : null
       }
     >
+      {/* Subscription Reminder Notification Banner */}
+      {renderSubscriptionBanner()}
+
       {/* OWNER DASHBOARD EXPERIENCE */}
       {isOwner && (
         <div className="space-y-6">

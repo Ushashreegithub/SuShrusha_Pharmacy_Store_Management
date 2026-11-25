@@ -16,6 +16,7 @@ import {
   X,
   ChevronDown,
   Settings,
+  CreditCard,
 } from "lucide-react";
 import { getCurrentUserApi, logoutApi } from "@/lib/api";
 import { UserProfile } from "@/types/auth";
@@ -189,6 +190,12 @@ function PartnerLayoutContent({
       href: "/sushrusha/partner/accounts",
       icon: ShieldCheck,
       active: pathname.startsWith("/sushrusha/partner/accounts"),
+    },
+    {
+      label: "Subscription Management",
+      href: "/sushrusha/partner/subscriptions",
+      icon: CreditCard,
+      active: pathname.startsWith("/sushrusha/partner/subscriptions"),
     },
     {
       label: "Organization Settings",

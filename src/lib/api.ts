@@ -52,6 +52,14 @@ import {
   PartnerBranding,
 } from "@/types/partner";
 import {
+  PartnerSubscriptionItem,
+  SubscriptionPaymentItem,
+  SubscriptionMetrics,
+  ConfirmManualPaymentPayload,
+  RenewSubscriptionPayload,
+  CustomerSubscriptionResponse,
+} from "@/types/subscription";
+import {
   Store,
   CreateStorePayload,
   UpdateStorePayload,
@@ -2856,6 +2864,75 @@ export async function removePartnerLogoApi(): Promise<{
 export async function getPartnerBrandingApi(): Promise<PartnerBranding> {
   return apiFetch<PartnerBranding>("/partner/branding/");
 }
+
+// -----------------------------------------------------------------------------
+// Partner Subscription Management API Methods
+// -----------------------------------------------------------------------------
+
+export async function getPartnerSubscriptionsApi(params?: {
+  search?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PartnerPaginatedResponse<PartnerSubscriptionItem>> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.status && params.status !== "all") query.append("status", params.status);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+
+  const qStr = query.toString();
+  return apiFetch<PartnerPaginatedResponse<PartnerSubscriptionItem>>(
+    `/partner/subscriptions/${qStr ? `?${qStr}` : ""}`
+  );
+}
+
+export async function getPartnerSubscriptionDetailApi(
+  subscriptionId: number
+): Promise<PartnerSubscriptionItem> {
+  return apiFetch<PartnerSubscriptionItem>(`/partner/subscriptions/${subscriptionId}/`);
+}
+
+export async function getPartnerSubscriptionMetricsApi(): Promise<SubscriptionMetrics> {
+  return apiFetch<SubscriptionMetrics>("/partner/subscriptions/metrics/");
+}
+
+export async function confirmSubscriptionPaymentApi(
+  subscriptionId: number,
+  payload: ConfirmManualPaymentPayload
+): Promise<{
+  message: string;
+  subscription: PartnerSubscriptionItem;
+  payment: SubscriptionPaymentItem;
+}> {
+  return apiFetch(`/partner/subscriptions/${subscriptionId}/confirm-payment/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function renewSubscriptionApi(
+  subscriptionId: number,
+  payload: RenewSubscriptionPayload
+): Promise<{
+  message: string;
+  subscription: PartnerSubscriptionItem;
+  payment: SubscriptionPaymentItem;
+}> {
+  return apiFetch(`/partner/subscriptions/${subscriptionId}/renew/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Pharmacy Customer Subscription API Methods
+// -----------------------------------------------------------------------------
+
+export async function getCustomerSubscriptionApi(): Promise<CustomerSubscriptionResponse> {
+  return apiFetch<CustomerSubscriptionResponse>("/subscriptions/my-subscription/");
+}
+
 
 
 

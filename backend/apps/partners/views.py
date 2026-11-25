@@ -9,6 +9,8 @@ from rest_framework.pagination import PageNumberPagination
 
 from apps.authentication.models import User
 from apps.organizations.models import Organization, Store, OrganizationMembership, StoreMembership
+from apps.subscriptions.models import OrganizationSubscription
+from apps.subscriptions.services import is_janjeevan_partner
 from apps.partners.models import Partner, PartnerMembership
 from apps.audit.models import AuditEvent
 from apps.platform.session_utils import (
@@ -335,6 +337,16 @@ class PartnerPharmacyListCreateView(APIView):
                     notes=data.get("notes", ""),
                     is_active=True,
                 )
+
+                # Create an initial subscription only for Janjeevan pharmacies.
+                if is_janjeevan_partner(partner):
+                    OrganizationSubscription.objects.get_or_create(
+                        organization=org,
+                        defaults={
+                            "partner": partner,
+                            "status": OrganizationSubscription.Status.NOT_STARTED,
+                        },
+                    )
 
                 created_stores = []
                 for store_in in stores_inputs:

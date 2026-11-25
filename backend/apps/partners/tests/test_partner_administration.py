@@ -504,3 +504,44 @@ class PartnerAdministrationAndIsolationTests(TestCase):
             sc.get("/api/partner/overview/", HTTP_HOST="erp.sushrusaeclinic.com").status_code,
             403,
         )
+
+    def test_local_partner_domain_authorization_on_localhost(self):
+        """
+        Verify that in local development, an authenticated Partner Owner accessing via
+        localhost:8000 or localhost:3000 can access /api/partner/branding/ and
+        /api/partner/overview/ with proper partner context.
+        """
+        c = Client()
+        login_res = self._login(c, self.partner_owner.email, "PartnerPass@2026!", host="localhost:8000")
+        self.assertEqual(login_res.status_code, 200)
+
+        # 1. Branding on localhost
+        branding_res = c.get("/api/partner/branding/", HTTP_HOST="localhost:8000")
+        self.assertEqual(branding_res.status_code, 200)
+        self.assertEqual(branding_res.json()["slug"], "sushrusha-eclinic")
+
+        # 2. Overview on localhost
+        overview_res = c.get("/api/partner/overview/", HTTP_HOST="localhost:8000")
+        self.assertEqual(overview_res.status_code, 200)
+        self.assertEqual(overview_res.json()["partner"]["slug"], "sushrusha-eclinic")
+
+        # 3. Unauthenticated request to /api/partner/overview/ on localhost is rejected
+        unauth_c = Client()
+        unauth_res = unauth_c.get("/api/partner/overview/", HTTP_HOST="localhost:8000")
+        self.assertIn(unauth_res.status_code, [401, 403])
+
+        # 4. Platform superuser calling /api/partner/overview/ on localhost is rejected
+        admin_c = Client()
+        admin_login = admin_c.post(
+            "/api/auth/login/",
+            {"email": "platform@diracai.com", "password": "PlatformPass@2026!"},
+            content_type="application/json",
+            HTTP_HOST="localhost:8000",
+        )
+        self.assertEqual(admin_login.status_code, 200)
+        admin_partner_res = admin_c.get("/api/partner/overview/", HTTP_HOST="localhost:8000")
+        self.assertEqual(admin_partner_res.status_code, 403)
+
+        # 5. Non-partner production domain calling /api/partner/overview/ is blocked with 403
+        prod_res = c.get("/api/partner/overview/", HTTP_HOST="pharmapro.diracai.com")
+        self.assertEqual(prod_res.status_code, 403)

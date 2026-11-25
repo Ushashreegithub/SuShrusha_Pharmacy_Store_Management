@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "apps.audit.apps.AuditConfig",
     "apps.platform.apps.PlatformConfig",
     "apps.partners.apps.PartnersConfig",
+    "apps.subscriptions.apps.SubscriptionsConfig",
 ]
 
 MIDDLEWARE = [

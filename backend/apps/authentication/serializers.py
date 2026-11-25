@@ -166,6 +166,22 @@ class UserProfileSerializer(serializers.ModelSerializer):
             active_org = get_authoritative_organization(user, request=request)
         if not active_org:
             return None
+        sub_info = None
+        if active_org.partner_id:
+            from apps.subscriptions.services import is_janjeevan_partner
+            if is_janjeevan_partner(active_org.partner_id):
+                sub = getattr(active_org, "subscription", None)
+                if sub is None:
+                    from apps.subscriptions.models import OrganizationSubscription
+                    sub = OrganizationSubscription.objects.filter(organization=active_org).first()
+                if sub:
+                    sub_info = {
+                        "status": sub.effective_status,
+                        "is_expired": sub.is_expired,
+                        "is_valid": sub.is_valid,
+                        "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
+                    }
+
         return {
             "id": str(active_org.id),
             "name": active_org.name,
@@ -177,6 +193,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 if active_org.logo
                 else None
             ),
+            "subscription": sub_info,
         }
 
     def get_is_platform_admin(self, user):

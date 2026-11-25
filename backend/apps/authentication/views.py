@@ -21,6 +21,8 @@ from apps.authentication.models import (
     hash_token,
 )
 from apps.organizations.models import Organization, OrganizationMembership, StoreMembership
+from apps.subscriptions.models import OrganizationSubscription
+from apps.subscriptions.services import is_janjeevan_partner
 from apps.organizations.domain_routing import normalize_host
 from apps.partners.models import PartnerMembership
 from apps.audit.models import AuditEvent
@@ -495,6 +497,58 @@ class LoginView(APIView):
             request.session["bound_domain"] = normalize_host(request.get_host())
             request.active_organization = chosen_org_for_session
             request.active_partner = None
+
+        # Start the Janjeevan pharmacy trial only when its own owner logs in.
+        # Partner owners, managers, and pharmacy staff must not start the trial.
+        if (
+            chosen_org_for_session
+            and is_janjeevan_partner(chosen_org_for_session.partner_id)
+            and chosen_org_for_session.owner_id == user.id
+            and OrganizationMembership.objects.filter(
+                organization=chosen_org_for_session,
+                user=user,
+                role="owner",
+                is_active=True,
+            ).exists()
+        ):
+            with transaction.atomic():
+                subscription, _ = (
+                    OrganizationSubscription.objects.select_for_update().get_or_create(
+                        organization=chosen_org_for_session,
+                        defaults={
+                            "partner_id": chosen_org_for_session.partner_id,
+                            "status": OrganizationSubscription.Status.NOT_STARTED,
+                        },
+                    )
+                )
+
+                if subscription.status == OrganizationSubscription.Status.NOT_STARTED:
+                    trial_start = timezone.now()
+                    subscription.status = OrganizationSubscription.Status.TRIALING
+                    subscription.trial_started_at = trial_start
+                    subscription.current_period_start = trial_start
+                    subscription.current_period_end = trial_start + timedelta(days=365)
+                    subscription.save(
+                        update_fields=[
+                            "status",
+                            "trial_started_at",
+                            "current_period_start",
+                            "current_period_end",
+                            "updated_at",
+                        ]
+                    )
+                    AuditEvent.objects.create(
+                        event_type="SUBSCRIPTION_TRIAL_STARTED",
+                        user=user,
+                        organization=chosen_org_for_session,
+                        details={
+                            "partner_id": str(chosen_org_for_session.partner_id),
+                            "subscription_id": subscription.id,
+                            "trial_started_at": trial_start.isoformat(),
+                            "current_period_end": subscription.current_period_end.isoformat(),
+                            "action": "owner_first_login_trial_activation",
+                        },
+                    )
 
         if remember_me:
             request.session.set_expiry(60 * 60 * 24 * 14)  # 14 days
