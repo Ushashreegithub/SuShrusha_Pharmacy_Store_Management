@@ -39,16 +39,16 @@ export default function HomePage() {
       {/* =========================================================================
           1. HEADER / NAVBAR
           ========================================================================= */}
-      <header className="bg-white border-b border-[#E2E8F0] shadow-2xs relative z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-          {/* Brand Logo */}
-          <Logo size="md" href="/" withTagline={false} />
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] shadow-2xs transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          {/* Brand Logo - Prominent, larger, premium navy & teal typography */}
+          <Logo size="lg" href="/" withTagline={false} />
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-600">
+          <nav className="hidden md:flex items-center gap-9 text-sm font-semibold text-slate-600">
             <a
               href="#"
-              className="hover:text-[#0F766E] transition-colors"
+              className="text-[#0F766E] font-bold transition-colors"
             >
               Home
             </a>
@@ -84,7 +84,7 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bold px-4 text-slate-700"
+                className="text-xs font-bold px-4 py-2 text-slate-700 bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300 rounded-xl transition-all shadow-2xs h-10"
               >
                 Login
               </Button>
@@ -93,7 +93,7 @@ export default function HomePage() {
               <Button
                 variant="primary"
                 size="sm"
-                className="text-xs font-bold px-3 bg-[#0F766E] hover:bg-[#0D645D]"
+                className="text-xs font-bold px-5 py-2 bg-[#0F766E] hover:bg-[#0D645D] text-white rounded-xl transition-all shadow-sm shadow-teal-900/10 hover:shadow-md hover:-translate-y-0.5 h-10"
               >
                 <span>Register</span>
               </Button>
@@ -103,7 +103,7 @@ export default function HomePage() {
           {/* Mobile Menu Hamburger Button */}
           <div className="md:hidden flex items-center gap-2">
             <Link href="/login">
-              <Button variant="outline" size="sm" className="text-xs px-2.5 py-1">
+              <Button variant="outline" size="sm" className="text-xs px-3 py-1.5 h-9 rounded-xl">
                 Login
               </Button>
             </Link>
@@ -113,60 +113,60 @@ export default function HomePage() {
               className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-[#E2E8F0] px-4 pt-3 pb-5 space-y-3 shadow-lg animate-in slide-in-from-top duration-200">
-            <div className="flex flex-col space-y-2 text-sm font-semibold text-slate-700">
+          <div className="md:hidden bg-white border-b border-[#E2E8F0] px-5 pt-3 pb-6 space-y-4 shadow-xl animate-in slide-in-from-top duration-200">
+            <div className="flex flex-col space-y-2.5 text-sm font-semibold text-slate-700">
               <a
                 href="#"
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-slate-50 hover:text-[#0F766E]"
+                className="p-2.5 rounded-xl text-[#0F766E] bg-teal-50/70 font-bold"
               >
                 Home
               </a>
               <a
                 href="#features"
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-slate-50 hover:text-[#0F766E]"
+                className="p-2.5 rounded-xl hover:bg-slate-50 hover:text-[#0F766E]"
               >
                 Features
               </a>
               <a
                 href="#solutions"
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-slate-50 hover:text-[#0F766E]"
+                className="p-2.5 rounded-xl hover:bg-slate-50 hover:text-[#0F766E]"
               >
                 Solutions
               </a>
               <a
                 href="#about"
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-slate-50 hover:text-[#0F766E]"
+                className="p-2.5 rounded-xl hover:bg-slate-50 hover:text-[#0F766E]"
               >
                 Why PharmaPro
               </a>
               <a
                 href="#contact"
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg hover:bg-slate-50 hover:text-[#0F766E]"
+                className="p-2.5 rounded-xl hover:bg-slate-50 hover:text-[#0F766E]"
               >
                 Contact
               </a>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2.5">
               <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" size="sm" fullWidth className="text-xs">
+                <Button variant="outline" size="sm" fullWidth className="text-xs h-10 rounded-xl font-bold">
                   Login
                 </Button>
               </Link>
               <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="primary" size="sm" fullWidth className="text-xs">
+                <Button variant="primary" size="sm" fullWidth className="text-xs h-10 rounded-xl font-bold bg-[#0F766E] hover:bg-[#0D645D]">
                   Register Now
                 </Button>
               </Link>
@@ -178,42 +178,49 @@ export default function HomePage() {
       {/* =========================================================================
           2. HERO SECTION
           ========================================================================= */}
-      <section className="relative overflow-hidden pt-10 pb-16 sm:pt-16 sm:pb-24 lg:pt-20 lg:pb-28 bg-gradient-to-b from-[#F0FDFA]/70 via-[#F8FAFC] to-[#F8FAFC]">
-        {/* Decorative background grid */}
-        <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#0F766E_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
+      <section className="relative overflow-hidden pt-10 pb-12 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16 bg-gradient-to-b from-[#F0FDFA] via-[#F8FAFC] to-white">
+        {/* Soft Ambient Radial Mint Glows */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-teal-200/25 rounded-full blur-3xl pointer-events-none -z-0" />
+        <div className="absolute -top-20 -left-20 w-[420px] h-[420px] bg-cyan-100/35 rounded-full blur-3xl pointer-events-none -z-0" />
+        
+        {/* Subtle Decorative Background Dot Pattern */}
+        <div className="absolute inset-0 opacity-[0.035] bg-[radial-gradient(#0F766E_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
             {/* Left Column: Headline and Call-to-Actions */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            <div className="lg:col-span-7 space-y-7 text-center lg:text-left">
               {/* Product Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#0F766E] text-xs font-bold tracking-wide uppercase">
-                <ShieldCheck className="w-4 h-4 text-[#0F766E]" />
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-teal-50/90 border border-teal-200 text-[#0F766E] text-xs font-bold tracking-wide uppercase shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5 text-[#0F766E]" />
                 <span>Intelligent Management • Better Pharmacy Operations</span>
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#0F172A] tracking-tight leading-[1.08]">
                 Smart Pharmacy Management for{" "}
-                <span className="text-[#0F766E]">Modern Pharmacies</span>
+                <span className="text-[#0F766E] bg-gradient-to-r from-[#0F766E] via-[#0D9488] to-[#14B8A6] bg-clip-text text-transparent">
+                  Modern Pharmacies
+                </span>
               </h1>
 
               {/* Supporting Copy */}
-              <p className="text-slate-600 text-sm sm:text-base lg:text-lg leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0 font-normal">
                 Manage your pharmacy stores, team, inventory, billing, and daily
                 operations through one organized platform designed to simplify
                 pharmacy management.
               </p>
 
               {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                 <Link href="/register" className="w-full sm:w-auto">
                   <Button
                     variant="primary"
                     size="lg"
-                    className="w-full sm:w-auto px-3 py-3 text-sm font-bold bg-[#0F766E] hover:bg-[#0D645D] shadow-md shadow-teal-900/10"
+                    className="w-full sm:w-auto px-8 py-3.5 h-12 text-sm font-bold bg-[#0F766E] hover:bg-[#0D645D] text-white rounded-xl shadow-lg shadow-teal-900/15 hover:shadow-xl transition-all transform hover:-translate-y-0.5 inline-flex items-center justify-center gap-2"
                   >
                     <span>Register Now</span>
+                    <ArrowRight className="w-4 h-4 ml-0.5" />
                   </Button>
                 </Link>
 
@@ -221,7 +228,7 @@ export default function HomePage() {
                   <Button
                     variant="outline"
                     size="lg"
-                    className="w-full sm:w-auto px-7 py-3 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border-[#E2E8F0]"
+                    className="w-full sm:w-auto px-8 py-3.5 h-12 text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs hover:border-slate-300 transition-all inline-flex items-center justify-center"
                   >
                     <span>Login</span>
                   </Button>
@@ -229,19 +236,25 @@ export default function HomePage() {
               </div>
 
               {/* Security & Access Highlights */}
-              <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-4 text-xs font-medium text-slate-500">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-y-2.5 gap-x-5 text-xs font-semibold text-slate-600">
+                <span className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-teal-50 text-[#0F766E] flex items-center justify-center shrink-0 border border-teal-100">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#0F766E]" />
+                  </div>
                   Owner Registration
                 </span>
-                <span>•</span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-slate-300 hidden sm:inline">•</span>
+                <span className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-teal-50 text-[#0F766E] flex items-center justify-center shrink-0 border border-teal-100">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#0F766E]" />
+                  </div>
                   Direct Team Provisioning
                 </span>
-                <span>•</span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-slate-300 hidden sm:inline">•</span>
+                <span className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-teal-50 text-[#0F766E] flex items-center justify-center shrink-0 border border-teal-100">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#0F766E]" />
+                  </div>
                   Multi-Branch Oversight
                 </span>
               </div>
@@ -251,35 +264,35 @@ export default function HomePage() {
             <div className="lg:col-span-5 relative">
               <div className="relative mx-auto max-w-md lg:max-w-none">
                 {/* Glow ring */}
-                <div className="absolute -inset-1.5 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur-sm opacity-20" />
+                <div className="absolute -inset-2 bg-gradient-to-r from-teal-500/20 via-cyan-500/15 to-teal-400/20 rounded-3xl blur-xl opacity-70 pointer-events-none" />
 
                 {/* Main Image Frame */}
-                <div className="relative rounded-2xl overflow-hidden border border-[#E2E8F0] bg-white shadow-xl aspect-4/3 sm:aspect-16/11">
+                <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 bg-white shadow-2xl shadow-teal-950/10 aspect-4/3 sm:aspect-16/11 group">
                   <PharmacyImage
                     src="/images/hero-pharmacy.jpg"
                     alt="Pharmacist working in modern pharmacy with organized medicine shelves"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
 
                   {/* Overlay Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/10 to-transparent" />
 
                   {/* Caption badge at bottom */}
-                  <div className="absolute bottom-4 left-4 right-4 p-3 bg-white/95 backdrop-blur-md rounded-xl border border-white/60 shadow-md flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0F766E] flex items-center justify-center">
+                  <div className="absolute bottom-4 left-4 right-4 p-3.5 bg-white/95 backdrop-blur-md rounded-2xl border border-white/60 shadow-lg flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center shrink-0 border border-teal-100">
                         <Store className="w-4 h-4" />
                       </div>
                       <div>
                         <span className="font-bold text-slate-900 block leading-tight">
                           Branch Operations Hub
                         </span>
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[11px] text-slate-500">
                           Centralized store coordination
                         </span>
                       </div>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Active
                     </span>
@@ -287,18 +300,24 @@ export default function HomePage() {
                 </div>
 
                 {/* Floating Indicator Chip: Multi-Store Security */}
-                <div className="hidden sm:flex absolute -top-4 -left-6 bg-white p-3 rounded-xl border border-[#E2E8F0] shadow-lg items-center gap-2.5 text-xs">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                    <ShieldCheck className="w-4 h-4" />
+                <div className="hidden sm:flex absolute -top-5 -left-6 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/90 shadow-lg shadow-slate-900/5 items-center gap-3 text-xs">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-bold text-slate-900 block text-[11px] leading-tight">
+                    <span className="font-bold text-slate-900 block text-xs leading-tight">
                       Role-Based Access
                     </span>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[10px] text-slate-500 font-medium">
                       Owners • Managers • Staff
                     </span>
                   </div>
+                </div>
+
+                {/* Floating Accent Chip: Live Sync */}
+                <div className="hidden sm:flex absolute -bottom-3 -right-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-md items-center gap-2 text-xs font-bold text-slate-800">
+                  <span className="w-2 h-2 rounded-full bg-teal-500" />
+                  <span>Multi-Branch Sync</span>
                 </div>
               </div>
             </div>
@@ -307,64 +326,164 @@ export default function HomePage() {
       </section>
 
       {/* =========================================================================
-          3. TRUST & GENUINE PLATFORM BENEFITS BAR
+          3. TRUST & GENUINE PLATFORM BENEFITS BAR (4 FEATURE CARDS)
           ========================================================================= */}
-      <section className="bg-white border-y border-[#E2E8F0] py-8 sm:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center flex-shrink-0 border border-teal-100">
-                <Store className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="font-bold text-slate-900 text-xs sm:text-sm">
-                  Centralized Store Management
-                </h3>
-                <p className="text-[11px] text-slate-500 leading-normal">
+      <section className="bg-white border-y border-slate-200/80 py-10 sm:py-14 lg:py-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E] bg-teal-50 px-3 py-1 rounded-full border border-teal-200 inline-block">
+              Core Capabilities
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
+              Built for Modern Pharmacy Excellence
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600">
+              Essential enterprise infrastructure designed to coordinate stores, team, and security.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-5">
+            {/* Card 1: Centralized Store Management */}
+            <div className="group bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs hover:shadow-xl hover:border-teal-300 transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between space-y-4">
+              <div className="space-y-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-teal-50 text-[#0F766E] flex items-center justify-center border border-teal-100 group-hover:bg-[#0F766E] group-hover:text-white transition-colors">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="font-bold text-slate-900 text-base sm:text-lg tracking-tight">
+                    Centralized Store Management
+                  </h3>
+                  <div className="w-8 h-1 bg-[#0F766E] rounded-full" />
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Manage multiple retail branches and dispensaries under a single organization.
                 </p>
               </div>
+
+              {/* Dedicated Image */}
+              <div className="space-y-2.5 pt-1">
+                <div className="rounded-xl overflow-hidden aspect-16/10 border border-slate-100 bg-slate-50 relative">
+                  <PharmacyImage
+                    src="/images/modern-store.jpg"
+                    alt="Modern pharmacy interior and medicine dispensary"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center text-xs font-bold text-[#0F766E] group-hover:text-[#0D645D] gap-1.5 group-hover:translate-x-1 transition-transform"
+                >
+                  <span>Explore store branches</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
 
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center flex-shrink-0 border border-teal-100">
-                <Users className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="font-bold text-slate-900 text-xs sm:text-sm">
-                  Role-Based Team Access
-                </h3>
-                <p className="text-[11px] text-slate-500 leading-normal">
+            {/* Card 2: Role-Based Team Access */}
+            <div className="group bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs hover:shadow-xl hover:border-teal-300 transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between space-y-4">
+              <div className="space-y-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-teal-50 text-[#0F766E] flex items-center justify-center border border-teal-100 group-hover:bg-[#0F766E] group-hover:text-white transition-colors">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="font-bold text-slate-900 text-base sm:text-lg tracking-tight">
+                    Role-Based Team Access
+                  </h3>
+                  <div className="w-8 h-1 bg-[#0F766E] rounded-full" />
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Specific roles for Owners, Managers, Pharmacists, and Cashiers with zero data spill.
                 </p>
               </div>
+
+              {/* Dedicated Image */}
+              <div className="space-y-2.5 pt-1">
+                <div className="rounded-xl overflow-hidden aspect-16/10 border border-slate-100 bg-slate-50 relative">
+                  <PharmacyImage
+                    src="/images/hero-pharmacist-wide.jpg"
+                    alt="Professional pharmacy team and staff"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center text-xs font-bold text-[#0F766E] group-hover:text-[#0D645D] gap-1.5 group-hover:translate-x-1 transition-transform"
+                >
+                  <span>Inspect role hierarchy</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
 
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center flex-shrink-0 border border-teal-100">
-                <Lock className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="font-bold text-slate-900 text-xs sm:text-sm">
-                  Secure Account Access
-                </h3>
-                <p className="text-[11px] text-slate-500 leading-normal">
+            {/* Card 3: Secure Account Access */}
+            <div className="group bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs hover:shadow-xl hover:border-teal-300 transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between space-y-4">
+              <div className="space-y-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-teal-50 text-[#0F766E] flex items-center justify-center border border-teal-100 group-hover:bg-[#0F766E] group-hover:text-white transition-colors">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="font-bold text-slate-900 text-base sm:text-lg tracking-tight">
+                    Secure Account Access
+                  </h3>
+                  <div className="w-8 h-1 bg-[#0F766E] rounded-full" />
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Standard Argon2 password hashing with HttpOnly session cookies.
                 </p>
               </div>
+
+              {/* Dedicated Image: Custom Cybersecurity Shield */}
+              <div className="space-y-2.5 pt-1">
+                <div className="rounded-xl overflow-hidden aspect-16/10 border border-slate-100 bg-slate-900 relative">
+                  <img
+                    src="/images/secure-access.svg"
+                    alt="Cybersecurity shield and Argon2 authentication security"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center text-xs font-bold text-[#0F766E] group-hover:text-[#0D645D] gap-1.5 group-hover:translate-x-1 transition-transform"
+                >
+                  <span>Review security model</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
 
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center flex-shrink-0 border border-teal-100">
-                <Activity className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <h3 className="font-bold text-slate-900 text-xs sm:text-sm">
-                  Organized Pharmacy Operations
-                </h3>
-                <p className="text-[11px] text-slate-500 leading-normal">
+            {/* Card 4: Organized Pharmacy Operations */}
+            <div className="group bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs hover:shadow-xl hover:border-teal-300 transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between space-y-4">
+              <div className="space-y-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-teal-50 text-[#0F766E] flex items-center justify-center border border-teal-100 group-hover:bg-[#0F766E] group-hover:text-white transition-colors">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="font-bold text-slate-900 text-base sm:text-lg tracking-tight">
+                    Organized Pharmacy Operations
+                  </h3>
+                  <div className="w-8 h-1 bg-[#0F766E] rounded-full" />
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Direct team creation, branch memberships, and audit trails.
                 </p>
+              </div>
+
+              {/* Dedicated Image */}
+              <div className="space-y-2.5 pt-1">
+                <div className="rounded-xl overflow-hidden aspect-16/10 border border-slate-100 bg-slate-50 relative">
+                  <PharmacyImage
+                    src="/images/pharmacist-service.jpg"
+                    alt="Pharmacist managing dispensing and clinic operations"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center text-xs font-bold text-[#0F766E] group-hover:text-[#0D645D] gap-1.5 group-hover:translate-x-1 transition-transform"
+                >
+                  <span>Get started now</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             </div>
           </div>
@@ -374,10 +493,10 @@ export default function HomePage() {
       {/* =========================================================================
           4. FEATURES SECTION
           ========================================================================= */}
-      <section id="features" className="py-16 sm:py-24 bg-[#F8FAFC]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <section id="features" className="py-12 sm:py-16 lg:py-20 bg-[#F8FAFC]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
           {/* Section Header */}
-          <div className="text-center max-w-3xl mx-auto space-y-3">
+          <div className="text-center max-w-3xl mx-auto space-y-2.5">
             <span className="text-xs font-bold uppercase tracking-wider text-[#0F766E] bg-teal-50 px-3 py-1 rounded-full border border-teal-200 inline-block">
               Platform Features
             </span>
@@ -391,9 +510,9 @@ export default function HomePage() {
           </div>
 
           {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {/* Feature 1: Store & Branch Management */}
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
@@ -421,7 +540,7 @@ export default function HomePage() {
             </div>
 
             {/* Feature 2: Team & Employee Management */}
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
@@ -449,7 +568,7 @@ export default function HomePage() {
             </div>
 
             {/* Feature 3: Role-Based Access */}
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
@@ -477,7 +596,7 @@ export default function HomePage() {
             </div>
 
             {/* Feature 4: Audit Activity Logs */}
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
@@ -504,92 +623,116 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Feature 5: Inventory Management (Planned) */}
-            <div className="bg-white/80 rounded-2xl border border-slate-200 p-6 shadow-2xs flex flex-col justify-between space-y-4">
+            {/* Feature 5: Inventory Management */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
                     <Package className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                    Planned Capability
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Available Now
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">
+                <h3 className="text-sm font-bold text-slate-900">
                   Inventory Management
                 </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Batch tracking, inter-branch stock transfers, minimum quantity triggers,
                   and purchase orders built for pharmaceutical precision.
                 </p>
               </div>
-              <span className="text-[11px] text-slate-400 font-medium">In Phase Development</span>
+              <Link
+                href="/login"
+                className="inline-flex items-center text-xs font-semibold text-[#0F766E] hover:underline gap-1 pt-2"
+              >
+                <span>Explore Inventory</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
-            {/* Feature 6: Sales and Billing (Planned) */}
-            <div className="bg-white/80 rounded-2xl border border-slate-200 p-6 shadow-2xs flex flex-col justify-between space-y-4">
+            {/* Feature 6: Sales and Billing (POS) */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
                     <CreditCard className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                    Planned Capability
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Available Now
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">
+                <h3 className="text-sm font-bold text-slate-900">
                   Sales and Billing (POS)
                 </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Fast counter billing, prescription scanning, tax-compliant invoicing,
                   and cashier session reconciliation.
                 </p>
               </div>
-              <span className="text-[11px] text-slate-400 font-medium">In Phase Development</span>
+              <Link
+                href="/login"
+                className="inline-flex items-center text-xs font-semibold text-[#0F766E] hover:underline gap-1 pt-2"
+              >
+                <span>Explore Billing</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
-            {/* Feature 7: Expiry and Low-Stock Alerts (Planned) */}
-            <div className="bg-white/80 rounded-2xl border border-slate-200 p-6 shadow-2xs flex flex-col justify-between space-y-4">
+            {/* Feature 7: Expiry and Low-Stock Alerts */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
                     <AlertTriangle className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                    Planned Capability
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Available Now
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">
+                <h3 className="text-sm font-bold text-slate-900">
                   Expiry &amp; Low-Stock Alerts
                 </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Early warning notifications for near-expiry medication batches and
                   critical threshold reordering alerts.
                 </p>
               </div>
-              <span className="text-[11px] text-slate-400 font-medium">In Phase Development</span>
+              <Link
+                href="/login"
+                className="inline-flex items-center text-xs font-semibold text-[#0F766E] hover:underline gap-1 pt-2"
+              >
+                <span>Explore Medicine Safety</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
-            {/* Feature 8: Reports and Analytics (Planned) */}
-            <div className="bg-white/80 rounded-2xl border border-slate-200 p-6 shadow-2xs flex flex-col justify-between space-y-4">
+            {/* Feature 8: Reports and Analytics */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F766E] flex items-center justify-center font-bold">
                     <BarChart3 className="w-5 h-5" />
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                    Planned Capability
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Available Now
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">
+                <h3 className="text-sm font-bold text-slate-900">
                   Reports and Analytics
                 </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   Branch performance comparison, dispensing trends, and profit margins
                   for multi-store pharmacy enterprise owners.
                 </p>
               </div>
-              <span className="text-[11px] text-slate-400 font-medium">In Phase Development</span>
+              <Link
+                href="/login"
+                className="inline-flex items-center text-xs font-semibold text-[#0F766E] hover:underline gap-1 pt-2"
+              >
+                <span>Explore Reports</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>
